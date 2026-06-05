@@ -371,6 +371,10 @@ select {
   width: 100%;
 }
 
+.source-select .source-title-row {
+  display: grid;
+}
+
 .source-unread {
   align-self: start;
   border: 1px solid var(--line);
@@ -420,7 +424,7 @@ select {
 .source-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .source-group-select {
@@ -428,12 +432,34 @@ select {
 }
 
 .source-buttons button {
-  min-height: 32px;
-  font-size: 0.86rem;
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 0.8rem;
 }
 
-.remove-source {
+.source-edit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.source-edit.hidden {
+  display: none;
+}
+
+.source-edit select,
+.source-edit button {
+  min-height: 30px;
+  font-size: 0.82rem;
+}
+
+.delete-source {
   color: var(--danger);
+}
+
+.hidden {
+  display: none !important;
 }
 
 .main {
@@ -515,6 +541,15 @@ select {
   box-shadow: none;
 }
 
+.post.favorite {
+  border-color: #ffb84d;
+}
+
+.post.favorite h3::before {
+  content: "★ ";
+  color: #ffb84d;
+}
+
 .read-toggle {
   border: 0;
   border-right: 1px solid var(--line);
@@ -583,6 +618,30 @@ select {
   margin: 8px 0 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 30;
+  display: grid;
+  min-width: 170px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.context-menu button {
+  border: 0;
+  border-radius: 0;
+  justify-content: flex-start;
+  min-height: 36px;
+  text-align: left;
+}
+
+.context-menu button + button {
+  border-top: 1px solid var(--line);
 }
 
 @media (max-width: 820px) {

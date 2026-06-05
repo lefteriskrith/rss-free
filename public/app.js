@@ -7,6 +7,7 @@ let currentSource = "all";
 let readObserver;
 let renderTimer;
 let draggedGroup = "";
+let contextPostId = "";
 
 const elements = {
   addForm: document.querySelector("#add-source-form"),
@@ -25,12 +26,16 @@ const elements = {
   feedList: document.querySelector("#feed-list"),
   status: document.querySelector("#status-text"),
   filterButtons: document.querySelectorAll(".filter"),
+  contextMenu: document.querySelector("#post-context-menu"),
+  contextReadToggle: document.querySelector("#context-read-toggle"),
+  contextFavoriteToggle: document.querySelector("#context-favorite-toggle"),
   sourceTemplate: document.querySelector("#source-template"),
   postTemplate: document.querySelector("#post-template")
 };
 
 applyTheme();
 bindSidebarPanels();
+bindPostContextMenu();
 render();
 
 elements.addForm.addEventListener("submit", async (event) => {
@@ -187,6 +192,7 @@ function mergePosts(posts, source) {
       excerpt: post.excerpt || "",
       author: post.author || "",
       read: false,
+      favorite: false,
       discoveredAt: new Date().toISOString()
     });
     added += 1;
@@ -362,6 +368,8 @@ function renderSources() {
     const item = fragment.querySelector(".source-item");
     const groupSelect = item.querySelector(".source-group-select");
     const sourceSelect = item.querySelector(".source-select");
+    const editPanel = item.querySelector(".source-edit");
+    const editButton = item.querySelector(".edit-source");
     const sourceUnread = unreadCountForSource(source.id);
     item.classList.toggle("active", currentSource === source.id);
     item.querySelector("strong").textContent = source.title;
@@ -388,6 +396,11 @@ function renderSources() {
       setStatus(`${source.title} moved to ${source.group}.`);
     });
 
+    editButton.addEventListener("click", () => {
+      const isHidden = editPanel.classList.toggle("hidden");
+      editButton.textContent = isHidden ? "Edit" : "Close";
+    });
+
     item.querySelector(".mark-source-read").addEventListener("click", () => {
       const count = markSourceRead(source.id);
       saveState();
@@ -400,7 +413,7 @@ function renderSources() {
       setStatus(`Copied generated RSS for ${source.title}.`);
     });
 
-    item.querySelector(".remove-source").addEventListener("click", () => {
+    item.querySelector(".delete-source").addEventListener("click", () => {
       state.sources = state.sources.filter((candidate) => candidate.id !== source.id);
       state.posts = state.posts.filter((post) => post.sourceId !== source.id);
       saveState();
@@ -435,6 +448,7 @@ function renderPosts() {
 
     article.dataset.postId = post.id;
     article.classList.toggle("read", post.read);
+    article.classList.toggle("favorite", Boolean(post.favorite));
     toggle.title = post.read ? "Mark unread" : "Mark read";
     toggle.setAttribute("aria-label", toggle.title);
     toggle.addEventListener("click", () => {
@@ -460,6 +474,11 @@ function renderPosts() {
       if (currentFilter !== "all") scheduleRender();
     });
 
+    article.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      showPostContextMenu(post.id, event.clientX, event.clientY);
+    });
+
     fragment.querySelector(".source-name").textContent = post.sourceTitle;
     time.textContent = formatDate(post.date || post.discoveredAt);
     time.dateTime = post.date || post.discoveredAt;
@@ -479,6 +498,7 @@ function filteredPosts() {
       if (currentGroup !== "all" && sourceGroupForPost(post) !== currentGroup) return false;
       if (currentFilter === "read") return post.read;
       if (currentFilter === "unread") return !post.read;
+      if (currentFilter === "favorite") return Boolean(post.favorite);
       return true;
     })
     .sort((a, b) => dateValue(b.date || b.discoveredAt) - dateValue(a.date || a.discoveredAt));
@@ -626,6 +646,61 @@ function bindSidebarPanels() {
       setSidebarPanelOpen(panel, panel.classList.contains("collapsed"));
     });
   });
+}
+
+function bindPostContextMenu() {
+  elements.contextReadToggle.addEventListener("click", () => {
+    const post = findContextPost();
+    if (!post) return;
+    post.read = !post.read;
+    saveState();
+    hidePostContextMenu();
+    render();
+    setStatus(`${post.read ? "Marked read" : "Marked unread"}: ${post.title}`);
+  });
+
+  elements.contextFavoriteToggle.addEventListener("click", () => {
+    const post = findContextPost();
+    if (!post) return;
+    post.favorite = !post.favorite;
+    saveState();
+    hidePostContextMenu();
+    render();
+    setStatus(`${post.favorite ? "Added favorite" : "Removed favorite"}: ${post.title}`);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!elements.contextMenu.contains(event.target)) hidePostContextMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hidePostContextMenu();
+  });
+}
+
+function showPostContextMenu(postId, x, y) {
+  contextPostId = postId;
+  const post = findContextPost();
+  if (!post) return;
+
+  elements.contextReadToggle.textContent = post.read ? "Mark unread" : "Mark read";
+  elements.contextFavoriteToggle.textContent = post.favorite ? "Remove favorite" : "Add favorite";
+  elements.contextMenu.classList.remove("hidden");
+
+  const width = elements.contextMenu.offsetWidth || 180;
+  const height = elements.contextMenu.offsetHeight || 80;
+  const left = Math.min(x, window.innerWidth - width - 10);
+  const top = Math.min(y, window.innerHeight - height - 10);
+  elements.contextMenu.style.left = `${Math.max(10, left)}px`;
+  elements.contextMenu.style.top = `${Math.max(10, top)}px`;
+}
+
+function hidePostContextMenu() {
+  contextPostId = "";
+  elements.contextMenu.classList.add("hidden");
+}
+
+function findContextPost() {
+  return state.posts.find((post) => post.id === contextPostId);
 }
 
 function setSidebarPanelOpen(panel, isOpen) {

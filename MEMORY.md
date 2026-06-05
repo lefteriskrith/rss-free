@@ -33,7 +33,8 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Clicking a post opens the original URL in a new tab and marks it read.
 - Hovering over a post marks it read.
 - Scrolling past unread posts marks them read when they are sufficiently visible.
-- Filters: All, Unread, Read.
+- Right-clicking a post opens actions for mark read/unread and favorite/unfavorite.
+- Filters: All, Unread, Read, Favorites.
 - `Refresh all` checks every saved source again and adds new posts.
 
 ## Groups
@@ -47,6 +48,7 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Groups can be reordered via drag and drop in the sidebar.
 - Groups can be deleted from the sidebar; sources inside a deleted group move to another available group.
 - Groups and individual sources both show unread counts in the sidebar.
+- Each source shows a visible unread badge beside its title/URL.
 - Clicking a group name/count filters the feed to unread posts from that group.
 - The `Show`/`Hide` control is the only group expand/collapse trigger.
 - `General` can be reordered and deleted like any other group; if the last group is deleted, `Ungrouped` is created as a fallback.
@@ -56,8 +58,7 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Each source has:
   - `Mark read`: marks all posts from that source read.
   - `Copy RSS`: copies generated RSS XML for that source.
-  - Group selector: moves the source to another group.
-  - `Remove`: removes the source and its posts.
+  - `Edit`: opens a compact panel for changing group or deleting the source.
 
 ## Theme
 
@@ -130,3 +131,5 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - 2026-06-05: Removed special protection from `General`; it can now be reordered or deleted, with sources moved to another group or `Ungrouped` fallback.
 - 2026-06-05: Made source unread counts more visible as badges and reduced OPML import/export button height.
 - 2026-06-05: Rewrote README as a full GitHub project README and added `docs/screenshots/rss-yo-preview.svg` as a repository screenshot preview.
+- 2026-06-05: Moved per-source group selection and delete into an `Edit` panel; source action buttons were made smaller.
+- 2026-06-05: Added post right-click context menu for mark read/unread and favorite/unfavorite, plus a Favorites feed filter.

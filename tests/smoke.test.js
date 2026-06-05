@@ -20,11 +20,18 @@ test("main HTML includes required reader controls", async () => {
     'id="group-filter"',
     'id="opml-import"',
     'id="export-opml"',
+    'data-filter="favorite"',
+    'id="post-context-menu"',
+    'id="context-read-toggle"',
+    'id="context-favorite-toggle"',
     'class="source-select"',
     'class="source-title-row"',
     'class="source-unread"',
     'class="mark-source-read"',
-    'class="copy-rss"'
+    'class="copy-rss"',
+    'class="edit-source"',
+    'class="source-edit hidden"',
+    'class="delete-source"'
   ].forEach((needle) => assert.ok(html.includes(needle), `Missing ${needle}`));
 });
 
@@ -39,10 +46,16 @@ test("client script wires key reader behaviors", async () => {
     "groupFromParentOutline",
     "buildOpml",
     "observeUnreadPosts",
+    "bindPostContextMenu",
+    "showPostContextMenu",
+    "hidePostContextMenu",
+    "findContextPost",
     "findExistingSource",
     "findExistingSourceByUrl",
     "sourceFingerprints",
     "mouseenter",
+    "contextmenu",
+    "favorite",
     "markSourceRead",
     "renderGroupControls",
     "currentSource",
@@ -85,9 +98,14 @@ test("stylesheet includes dark theme and group styles", async () => {
     ".drag-over",
     ".source-item.active",
     ".source-unread",
+    ".source-select .source-title-row",
     "min-width: 28px",
     ".source-actions button",
+    ".source-edit.hidden",
+    ".delete-source",
     ".source-group-select",
+    ".context-menu",
+    ".post.favorite",
     ".post:hover"
   ].forEach((needle) => assert.ok(css.includes(needle), `Missing ${needle}`));
 });

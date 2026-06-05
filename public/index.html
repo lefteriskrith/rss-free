@@ -73,6 +73,7 @@
               <button class="filter active" data-filter="all" type="button">All</button>
               <button class="filter" data-filter="unread" type="button">Unread</button>
               <button class="filter" data-filter="read" type="button">Read</button>
+              <button class="filter" data-filter="favorite" type="button">Favorites</button>
             </div>
           </div>
         </header>
@@ -91,11 +92,14 @@
           <small></small>
           <span></span>
         </button>
-        <select class="source-group-select" aria-label="Move source to group"></select>
         <div class="source-buttons">
           <button class="mark-source-read" type="button">Mark read</button>
           <button class="copy-rss" type="button">Copy RSS</button>
-          <button class="remove-source" type="button">Remove</button>
+          <button class="edit-source" type="button">Edit</button>
+        </div>
+        <div class="source-edit hidden">
+          <select class="source-group-select" aria-label="Move source to group"></select>
+          <button class="delete-source" type="button">Delete source</button>
         </div>
       </li>
     </template>
@@ -113,6 +117,11 @@
         </a>
       </article>
     </template>
+
+    <div id="post-context-menu" class="context-menu hidden" role="menu" aria-label="Post actions">
+      <button id="context-read-toggle" type="button" role="menuitem">Mark unread</button>
+      <button id="context-favorite-toggle" type="button" role="menuitem">Add favorite</button>
+    </div>
 
     <script src="/app.js" type="module"></script>
   </body>
