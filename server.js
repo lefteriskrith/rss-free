@@ -1,6 +1,7 @@
 import express from "express";
 import Parser from "rss-parser";
 import * as cheerio from "cheerio";
+import { pathToFileURL } from "url";
 
 const app = express();
 const parser = new Parser({
@@ -17,7 +18,7 @@ const ARTICLE_HINTS = [
   /\/\d{4}-\d{1,2}-\d{1,2}/,
   /\/(post|posts|article|articles|blog|news|story|stories)\//i
 ];
-const SKIP_HINTS = /(about|account|advertis|archive|author|cart|category|comment|contact|cookie|feed|footer|help|login|logout|menu|privacy|profile|rss|search|share|shop|signin|signup|tag|terms)/i;
+const SKIP_HINTS = /(about|account|advertis|archive|author|cart|category|comment|contact|cookie|feed|footer|help|login|logout|menu|privacy|profile|search|share|shop|signin|signup|tag|terms)/i;
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static("public"));
@@ -41,9 +42,11 @@ app.get("/api/discover", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`RSS Yo is running at http://localhost:${PORT}`);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  app.listen(PORT, () => {
+    console.log(`RSS Yo is running at http://localhost:${PORT}`);
+  });
+}
 
 async function discoverSource(inputUrl) {
   const directFeed = await tryParseFeed(inputUrl);
@@ -229,6 +232,7 @@ function isLikelyArticle(url, baseUrl) {
 function normalizeInputUrl(value) {
   if (!value || typeof value !== "string") return "";
   const trimmed = value.trim();
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) && !/^https?:\/\//i.test(trimmed)) return "";
   const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   try {
     const url = new URL(withProtocol);
@@ -304,3 +308,19 @@ function hostname(url) {
     return url;
   }
 }
+
+export {
+  app,
+  canonicalUrl,
+  cleanText,
+  dateFromUrl,
+  discoverSource,
+  extractArticles,
+  findFeedLinks,
+  isLikelyArticle,
+  normalizeDate,
+  normalizeInputUrl,
+  pageTitle,
+  toAbsoluteUrl,
+  uniqueUrls
+};

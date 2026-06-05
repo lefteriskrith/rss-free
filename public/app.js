@@ -2,13 +2,21 @@ const STORAGE_KEY = "rss-yo-state-v1";
 
 const state = loadState();
 let currentFilter = "all";
+let currentGroup = "all";
+let readObserver;
+let renderTimer;
 
 const elements = {
   addForm: document.querySelector("#add-source-form"),
+  addGroupForm: document.querySelector("#add-group-form"),
   sourceUrl: document.querySelector("#source-url"),
+  sourceGroup: document.querySelector("#source-group"),
+  groupName: document.querySelector("#group-name"),
+  groupFilter: document.querySelector("#group-filter"),
   refreshAll: document.querySelector("#refresh-all"),
   exportOpml: document.querySelector("#export-opml"),
   importOpml: document.querySelector("#opml-import"),
+  themeToggle: document.querySelector("#theme-toggle"),
   sourcesList: document.querySelector("#sources-list"),
   sourceCount: document.querySelector("#source-count"),
   feedList: document.querySelector("#feed-list"),
@@ -18,18 +26,37 @@ const elements = {
   postTemplate: document.querySelector("#post-template")
 };
 
+applyTheme();
 render();
 
 elements.addForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const url = elements.sourceUrl.value.trim();
   if (!url) return;
-  await addOrRefreshSource(url);
+  await addOrRefreshSource(url, { group: elements.sourceGroup.value || "General" });
   elements.sourceUrl.value = "";
+});
+
+elements.addGroupForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const groupName = normalizeGroup(elements.groupName.value);
+  if (!groupName) return;
+  ensureGroup(groupName);
+  elements.sourceGroup.value = groupName;
+  elements.groupName.value = "";
+  saveState();
+  render();
+  setStatus(`Created group ${groupName}.`);
 });
 
 elements.refreshAll.addEventListener("click", async () => {
   await refreshAllSources();
+});
+
+elements.themeToggle.addEventListener("click", () => {
+  state.theme = state.theme === "dark" ? "light" : "dark";
+  saveState();
+  applyTheme();
 });
 
 elements.exportOpml.addEventListener("click", () => {
@@ -41,12 +68,17 @@ elements.importOpml.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   const text = await file.text();
-  const urls = parseOpmlUrls(text);
-  for (const url of urls) {
-    await addOrRefreshSource(url, { quiet: true });
+  const entries = parseOpmlEntries(text);
+  for (const entry of entries) {
+    await addOrRefreshSource(entry.url, { quiet: true, group: entry.group });
   }
-  setStatus(`Imported ${urls.length} source${urls.length === 1 ? "" : "s"}.`);
+  setStatus(`Imported ${entries.length} source${entries.length === 1 ? "" : "s"} from OPML.`);
   elements.importOpml.value = "";
+});
+
+elements.groupFilter.addEventListener("change", () => {
+  currentGroup = elements.groupFilter.value;
+  render();
 });
 
 elements.filterButtons.forEach((button) => {
@@ -71,6 +103,7 @@ async function addOrRefreshSource(url, options = {}) {
       feedUrl: result.feedUrl,
       title: result.title,
       mode: result.mode,
+      group: normalizeGroup(options.group) || "General",
       addedAt: new Date().toISOString(),
       lastChecked: ""
     };
@@ -80,7 +113,9 @@ async function addOrRefreshSource(url, options = {}) {
     source.feedUrl = result.feedUrl;
     source.title = result.title || source.title;
     source.mode = result.mode;
+    source.group = normalizeGroup(options.group) || source.group || "General";
     source.lastChecked = new Date().toISOString();
+    ensureGroup(source.group);
 
     if (!existing) state.sources.push(source);
 
@@ -155,6 +190,8 @@ function mergePosts(posts, source) {
 }
 
 function render() {
+  normalizeState();
+  renderGroupControls();
   renderSources();
   renderPosts();
   elements.filterButtons.forEach((button) => {
@@ -166,11 +203,36 @@ function renderSources() {
   elements.sourcesList.innerHTML = "";
   elements.sourceCount.textContent = String(state.sources.length);
 
-  state.sources.forEach((source) => {
+  groupedSources().forEach(([groupName, sources]) => {
+    const heading = document.createElement("li");
+    heading.className = "group-heading";
+    heading.textContent = groupName;
+    elements.sourcesList.appendChild(heading);
+
+    sources.forEach((source) => {
     const fragment = elements.sourceTemplate.content.cloneNode(true);
     const item = fragment.querySelector(".source-item");
+    const groupSelect = item.querySelector(".source-group-select");
     item.querySelector("strong").textContent = source.title;
+    item.querySelector("small").textContent = source.group || "General";
     item.querySelector("span").textContent = source.mode === "rss" ? source.feedUrl : source.siteUrl;
+
+    state.groups.forEach((group) => {
+      groupSelect.appendChild(new Option(group, group, false, group === source.group));
+    });
+    groupSelect.addEventListener("change", () => {
+      source.group = groupSelect.value;
+      saveState();
+      render();
+      setStatus(`${source.title} moved to ${source.group}.`);
+    });
+
+    item.querySelector(".mark-source-read").addEventListener("click", () => {
+      const count = markSourceRead(source.id);
+      saveState();
+      render();
+      setStatus(`${source.title}: marked ${count} post${count === 1 ? "" : "s"} as read.`);
+    });
 
     item.querySelector(".copy-rss").addEventListener("click", async () => {
       await navigator.clipboard.writeText(buildRssForSource(source));
@@ -187,9 +249,11 @@ function renderSources() {
 
     elements.sourcesList.appendChild(fragment);
   });
+  });
 }
 
 function renderPosts() {
+  disconnectReadObserver();
   elements.feedList.innerHTML = "";
   const posts = filteredPosts();
 
@@ -208,6 +272,7 @@ function renderPosts() {
     const link = fragment.querySelector(".post-link");
     const time = fragment.querySelector("time");
 
+    article.dataset.postId = post.id;
     article.classList.toggle("read", post.read);
     toggle.title = post.read ? "Mark unread" : "Mark read";
     toggle.setAttribute("aria-label", toggle.title);
@@ -224,6 +289,16 @@ function renderPosts() {
       render();
     });
 
+    article.addEventListener("mouseenter", () => {
+      if (post.read) return;
+      post.read = true;
+      article.classList.add("read");
+      toggle.title = "Mark unread";
+      toggle.setAttribute("aria-label", "Mark unread");
+      saveState();
+      if (currentFilter !== "all") scheduleRender();
+    });
+
     fragment.querySelector(".source-name").textContent = post.sourceTitle;
     time.textContent = formatDate(post.date || post.discoveredAt);
     time.dateTime = post.date || post.discoveredAt;
@@ -232,11 +307,14 @@ function renderPosts() {
 
     elements.feedList.appendChild(fragment);
   });
+
+  observeUnreadPosts();
 }
 
 function filteredPosts() {
   return state.posts
     .filter((post) => {
+      if (currentGroup !== "all" && sourceGroupForPost(post) !== currentGroup) return false;
       if (currentFilter === "read") return post.read;
       if (currentFilter === "unread") return !post.read;
       return true;
@@ -270,23 +348,41 @@ ${posts
 }
 
 function buildOpml() {
+  const sourceGroups = state.sources.reduce((groups, source) => {
+    const group = source.group || "General";
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(source);
+    return groups;
+  }, new Map());
+  const outlines = [...sourceGroups.entries()]
+    .map(([group, sources]) => `    <outline text="${escapeXml(group)}" title="${escapeXml(group)}">
+${sources
+  .map((source) => `      <outline text="${escapeXml(source.title)}" title="${escapeXml(source.title)}" type="rss" xmlUrl="${escapeXml(source.feedUrl || source.inputUrl)}" htmlUrl="${escapeXml(source.siteUrl || source.inputUrl)}" />`)
+  .join("\n")}
+    </outline>`)
+    .join("\n");
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <opml version="2.0">
   <head>
     <title>RSS Yo Sources</title>
   </head>
   <body>
-${state.sources
-  .map((source) => `    <outline text="${escapeXml(source.title)}" title="${escapeXml(source.title)}" type="rss" xmlUrl="${escapeXml(source.feedUrl || source.inputUrl)}" htmlUrl="${escapeXml(source.siteUrl || source.inputUrl)}" />`)
-  .join("\n")}
+${outlines}
   </body>
 </opml>`;
 }
 
-function parseOpmlUrls(text) {
+function parseOpmlEntries(text) {
   const document = new DOMParser().parseFromString(text, "text/xml");
   return [...document.querySelectorAll("outline")]
-    .map((outline) => outline.getAttribute("xmlUrl") || outline.getAttribute("htmlUrl") || outline.getAttribute("url"))
+    .map((outline) => {
+      const url = outline.getAttribute("xmlUrl") || outline.getAttribute("htmlUrl") || outline.getAttribute("url");
+      if (!url) return null;
+      const parent = outline.parentElement?.tagName?.toLowerCase() === "outline" ? outline.parentElement : null;
+      const group = normalizeGroup(parent?.getAttribute("title") || parent?.getAttribute("text")) || "General";
+      return { url, group };
+    })
     .filter(Boolean);
 }
 
@@ -301,9 +397,15 @@ async function fetchJson(url) {
 
 function loadState() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { sources: [], posts: [] };
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    return {
+      sources: stored.sources || [],
+      posts: stored.posts || [],
+      groups: stored.groups || [],
+      theme: stored.theme || "light"
+    };
   } catch {
-    return { sources: [], posts: [] };
+    return { sources: [], posts: [], groups: ["General"], theme: "light" };
   }
 }
 
@@ -318,6 +420,122 @@ function setStatus(message) {
 function setBusy(isBusy) {
   elements.addForm.querySelector("button").disabled = isBusy;
   elements.refreshAll.disabled = isBusy;
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = state.theme;
+  elements.themeToggle.textContent = state.theme === "dark" ? "Light" : "Dark";
+}
+
+function normalizeState() {
+  state.groups = [...new Set(["General", ...(state.groups || []), ...state.sources.map((source) => source.group || "General")])];
+  state.sources.forEach((source) => {
+    source.group = normalizeGroup(source.group) || "General";
+  });
+}
+
+function renderGroupControls() {
+  const selectedSourceGroup = elements.sourceGroup.value || "General";
+  const selectedFilterGroup = currentGroup;
+
+  elements.sourceGroup.innerHTML = "";
+  state.groups.forEach((group) => {
+    elements.sourceGroup.appendChild(new Option(group, group, false, group === selectedSourceGroup));
+  });
+
+  elements.groupFilter.innerHTML = "";
+  elements.groupFilter.appendChild(new Option("All groups", "all", false, selectedFilterGroup === "all"));
+  state.groups.forEach((group) => {
+    elements.groupFilter.appendChild(new Option(group, group, false, group === selectedFilterGroup));
+  });
+}
+
+function ensureGroup(groupName) {
+  const group = normalizeGroup(groupName) || "General";
+  if (!state.groups.includes(group)) state.groups.push(group);
+  return group;
+}
+
+function normalizeGroup(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function groupedSources() {
+  const groups = new Map();
+  state.sources
+    .slice()
+    .sort((a, b) => (a.group || "General").localeCompare(b.group || "General") || a.title.localeCompare(b.title))
+    .forEach((source) => {
+      const group = source.group || "General";
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push(source);
+    });
+  return [...groups.entries()];
+}
+
+function sourceGroupForPost(post) {
+  return state.sources.find((source) => source.id === post.sourceId)?.group || "General";
+}
+
+function markSourceRead(sourceId) {
+  let count = 0;
+  state.posts.forEach((post) => {
+    if (post.sourceId === sourceId && !post.read) {
+      post.read = true;
+      count += 1;
+    }
+  });
+  return count;
+}
+
+function observeUnreadPosts() {
+  if (!("IntersectionObserver" in window)) return;
+
+  readObserver = new IntersectionObserver(
+    (entries) => {
+      let changed = false;
+
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting || entry.intersectionRatio < 0.65) return;
+
+        const post = state.posts.find((candidate) => candidate.id === entry.target.dataset.postId);
+        if (!post || post.read) return;
+
+        post.read = true;
+        changed = true;
+        entry.target.classList.add("read");
+        const toggle = entry.target.querySelector(".read-toggle");
+        toggle.title = "Mark unread";
+        toggle.setAttribute("aria-label", "Mark unread");
+        readObserver.unobserve(entry.target);
+      });
+
+      if (changed) {
+        saveState();
+        if (currentFilter !== "all") scheduleRender();
+      }
+    },
+    {
+      threshold: [0.65],
+      rootMargin: "0px 0px -12% 0px"
+    }
+  );
+
+  document.querySelectorAll(".post:not(.read)").forEach((post) => {
+    readObserver.observe(post);
+  });
+}
+
+function disconnectReadObserver() {
+  if (readObserver) {
+    readObserver.disconnect();
+    readObserver = null;
+  }
+}
+
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(render, 450);
 }
 
 function canonicalUrl(url) {

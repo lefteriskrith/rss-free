@@ -2,6 +2,9 @@
   color-scheme: light;
   --bg: #f7f8f5;
   --panel: #ffffff;
+  --panel-soft: #eef2ea;
+  --button: #ffffff;
+  --toggle-bg: #f4f6f1;
   --line: #d8ded2;
   --text: #18201b;
   --muted: #697568;
@@ -10,6 +13,23 @@
   --read: #8f9a8d;
   --danger: #b23b3b;
   --shadow: 0 12px 35px rgba(27, 37, 28, 0.08);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #171a18;
+  --panel: #222622;
+  --panel-soft: #1c211d;
+  --button: #292f2a;
+  --toggle-bg: #1e241f;
+  --line: #3b443d;
+  --text: #d8dfd5;
+  --muted: #99a493;
+  --accent: #58b8a9;
+  --accent-strong: #8bcfc4;
+  --read: #788375;
+  --danger: #e18484;
+  --shadow: 0 12px 35px rgba(0, 0, 0, 0.16);
 }
 
 * {
@@ -25,15 +45,17 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
 button,
-.file-button {
+.file-button,
+select {
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--button);
   color: var(--text);
   cursor: pointer;
   min-height: 38px;
@@ -53,7 +75,7 @@ button:hover,
 
 .sidebar {
   border-right: 1px solid var(--line);
-  background: #eef2ea;
+  background: var(--panel-soft);
   padding: 22px;
   overflow: auto;
 }
@@ -95,7 +117,14 @@ button:hover,
   margin-bottom: 14px;
 }
 
+.group-form {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
 .add-form label,
+.group-form label,
 .section-heading {
   color: var(--muted);
   font-size: 0.82rem;
@@ -114,11 +143,28 @@ input[type="url"] {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+input[type="text"] {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+select {
+  min-height: 38px;
   padding: 0 10px;
 }
 
 .input-row button,
-#refresh-all {
+.primary-action {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
@@ -126,8 +172,9 @@ input[type="url"] {
 }
 
 .input-row button:hover,
-#refresh-all:hover {
+.primary-action:hover {
   background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 .source-actions {
@@ -135,10 +182,6 @@ input[type="url"] {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 22px;
-}
-
-#refresh-all {
-  grid-column: 1 / -1;
 }
 
 #opml-import {
@@ -172,10 +215,28 @@ input[type="url"] {
   border-top: 1px solid var(--line);
 }
 
+.group-heading {
+  margin: 14px 0 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .source-item strong,
-.source-item span {
+.source-item span,
+.source-item small {
   display: block;
   overflow-wrap: anywhere;
+}
+
+.source-item small {
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .source-item span {
@@ -186,7 +247,12 @@ input[type="url"] {
 
 .source-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.source-group-select {
+  width: 100%;
 }
 
 .source-buttons button {
@@ -212,6 +278,17 @@ input[type="url"] {
   max-width: 920px;
 }
 
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.toolbar-actions > button {
+  min-width: 96px;
+}
+
 .filters {
   display: flex;
   border: 1px solid var(--line);
@@ -228,7 +305,7 @@ input[type="url"] {
 
 .filters .active {
   background: var(--text);
-  color: #fff;
+  color: var(--bg);
 }
 
 .feed-list {
@@ -244,7 +321,7 @@ input[type="url"] {
   border-radius: 8px;
   color: var(--muted);
   text-align: center;
-  background: rgba(255, 255, 255, 0.58);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
 }
 
 .post {
@@ -268,7 +345,7 @@ input[type="url"] {
   border-radius: 0;
   min-height: 100%;
   padding: 0;
-  background: #f4f6f1;
+  background: var(--toggle-bg);
 }
 
 .read-toggle::before {
@@ -297,6 +374,10 @@ input[type="url"] {
   color: var(--accent-strong);
 }
 
+.post:hover {
+  border-color: var(--accent);
+}
+
 .post-meta {
   display: flex;
   flex-wrap: wrap;
@@ -319,7 +400,7 @@ input[type="url"] {
 
 .post p {
   margin: 8px 0 0;
-  color: #465044;
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
   line-height: 1.5;
 }
 
@@ -340,6 +421,15 @@ input[type="url"] {
   .toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .toolbar-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .toolbar-actions > button {
+    flex: 1 1 120px;
   }
 
   .filters,

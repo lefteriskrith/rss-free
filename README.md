@@ -9,9 +9,14 @@ RSS Yo is a small self-hosted web app for following RSS feeds and regular websit
 - Scrape likely article links when a site has no feed.
 - Feed view with title, source, date, excerpt, original link, and read/unread state.
 - Filters for All, Unread, and Read.
-- Sync all sources and deduplicate newly discovered posts by canonical URL.
+- Refresh all sources and deduplicate newly discovered posts by canonical URL.
+- Automatically mark unread posts as read when they pass through the reading view.
+- Mark posts as read on mouse hover.
+- Mark all posts from a single source as read.
+- Toggle between light and dark theme.
 - Import OPML from readers such as Feedly or Inoreader.
-- Export current sources as OPML.
+- Preserve OPML folders as groups, create your own groups, and filter the feed by group.
+- Export current sources as grouped OPML.
 - Copy generated RSS XML for any followed source.
 
 ## Setup

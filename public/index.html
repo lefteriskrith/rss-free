@@ -23,10 +23,18 @@
             <input id="source-url" name="url" type="url" placeholder="https://example.com" required>
             <button type="submit">Add</button>
           </div>
+          <select id="source-group" aria-label="Choose source group"></select>
+        </form>
+
+        <form id="add-group-form" class="group-form">
+          <label for="group-name">Create group</label>
+          <div class="input-row">
+            <input id="group-name" name="group" type="text" placeholder="Tech, News, Blogs">
+            <button type="submit">Create</button>
+          </div>
         </form>
 
         <div class="source-actions">
-          <button id="refresh-all" type="button">Sync</button>
           <label class="file-button" for="opml-import">Import OPML</label>
           <input id="opml-import" type="file" accept=".opml,.xml,text/xml">
           <button id="export-opml" type="button">Export OPML</button>
@@ -47,10 +55,15 @@
             <h2>Feed</h2>
             <p id="status-text">Add a source to begin.</p>
           </div>
-          <div class="filters" role="group" aria-label="Post filter">
-            <button class="filter active" data-filter="all" type="button">All</button>
-            <button class="filter" data-filter="unread" type="button">Unread</button>
-            <button class="filter" data-filter="read" type="button">Read</button>
+          <div class="toolbar-actions">
+            <button id="refresh-all" class="primary-action" type="button">Refresh all</button>
+            <button id="theme-toggle" type="button">Dark</button>
+            <select id="group-filter" aria-label="Filter by group"></select>
+            <div class="filters" role="group" aria-label="Post filter">
+              <button class="filter active" data-filter="all" type="button">All</button>
+              <button class="filter" data-filter="unread" type="button">Unread</button>
+              <button class="filter" data-filter="read" type="button">Read</button>
+            </div>
           </div>
         </header>
 
@@ -62,9 +75,12 @@
       <li class="source-item">
         <div>
           <strong></strong>
+          <small></small>
           <span></span>
         </div>
+        <select class="source-group-select" aria-label="Move source to group"></select>
         <div class="source-buttons">
+          <button class="mark-source-read" type="button">Mark read</button>
           <button class="copy-rss" type="button">Copy RSS</button>
           <button class="remove-source" type="button">Remove</button>
         </div>
