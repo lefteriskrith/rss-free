@@ -44,6 +44,12 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Existing sources can be moved to another group from the sidebar.
 - Main toolbar can filter by all groups or one group.
 - OPML export preserves groups.
+- Groups can be reordered via drag and drop in the sidebar.
+- Groups can be deleted from the sidebar; sources inside a deleted group move to another available group.
+- Groups and individual sources both show unread counts in the sidebar.
+- Clicking a group name/count filters the feed to unread posts from that group.
+- The `Show`/`Hide` control is the only group expand/collapse trigger.
+- `General` can be reordered and deleted like any other group; if the last group is deleted, `Ungrouped` is created as a fallback.
 
 ## Source Actions
 
@@ -56,8 +62,11 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 ## Theme
 
 - Light and dark themes are supported.
-- Dark theme should stay soft and readable, not high-contrast black/white.
+- Dark theme should be true black/white with a clean cyan accent, not muddy green/gray.
 - Theme preference is stored in localStorage.
+- App logo is `public/assets/rss-yo-logo.svg`; it is used both as the header logo and browser favicon.
+- Sidebar add-source and create-group controls stay collapsed until opened to save vertical space.
+- OPML import/export controls should remain compact to preserve sidebar space.
 
 ## Deployment Notes
 
@@ -65,6 +74,14 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Netlify static hosting can show the UI but cannot run the Express API as-is.
 - Netlify support would require converting the API into Netlify Functions.
 - Render/Railway/Fly/VPS can run the app as a normal Node service.
+
+## Desktop Packaging Decision
+
+- If the user asks to "make an exe" or "vgale mou exe", use Electron for the v1 desktop build.
+- Reason: Electron best matches the current HTML/CSS/JS + Node/Express architecture and can bundle/run the local backend with fewer surprises.
+- Expected v1 behavior: launching the `.exe` starts the local server automatically and opens RSS Yo in a desktop app window or local browser.
+- Tauri remains a possible later optimization for a smaller/lighter app, but not the preferred first executable path.
+- Desktop sync across multiple PCs is not automatic; it will require a backend account/database, shared cloud JSON file, or manual import/export.
 
 ## Known Limitations
 
@@ -90,3 +107,26 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - 2026-06-05: Refactored `server.js` so tests can import helpers without starting the Express server.
 - 2026-06-05: Fixed URL normalization to reject non-HTTP schemes such as `ftp://`.
 - 2026-06-05: Relaxed article URL skip rules so article slugs containing `rss` are not wrongly rejected.
+- 2026-06-05: Made empty groups visible in the sidebar immediately after creation.
+- 2026-06-05: Made sidebar group headings clickable filters with unread counts.
+- 2026-06-05: Made sidebar source names clickable filters so a single source such as `in.gr` or `Unboxholics` can be viewed alone.
+- 2026-06-05: Increased dark theme readability with clearer text, stronger borders, and less muddy read-state colors.
+- 2026-06-05: Recorded desktop packaging decision: use Electron for first Windows `.exe` build.
+- 2026-06-05: Hardened OPML import group detection for Feedly-style nested folders and `category` attributes such as `Tech` or `/Tech`.
+- 2026-06-05: Changed dark theme direction to true black/white with cyan accents.
+- 2026-06-05: Added localStorage group cleanup migration so blank/slash-only imported groups are removed and merged into `General`.
+- 2026-06-05: Changed sidebar sources list into an expandable group tree; all groups remain visible, and sources show inside expanded groups.
+- 2026-06-05: Improved OPML re-import matching so existing feeds can be moved into groups even when Feedly `xmlUrl`, saved `feedUrl`, redirects, or `www` variants differ.
+- 2026-06-05: Changed OPML import flow to create/open groups and move existing sources before network refreshes, so the sidebar tree appears immediately after import.
+- 2026-06-05: Indented source rows under group headings with a guide line to make the sidebar visibly tree-like.
+- 2026-06-05: Fixed group names not appearing in the sidebar tree by changing HTML escaping from a `template` element to a normal `div`.
+- 2026-06-05: Added sidebar drag-and-drop group reordering and group deletion, with deleted group sources moved to `General`.
+- 2026-06-05: Added unread count badges beside each individual source in the sidebar tree.
+- 2026-06-05: Replaced cryptic group expand/collapse arrows with explicit `Show`/`Hide` action pills.
+- 2026-06-05: Split group row interactions so group name/count shows unread posts from that group, while `Show`/`Hide` only expands or collapses the group.
+- 2026-06-05: Moved the group `Show`/`Hide` control to the left of the group name for clearer sidebar scanning.
+- 2026-06-05: Added orange RSS-style logo asset and used it as the browser favicon and app header mark.
+- 2026-06-05: Collapsed the sidebar add-source and create-group forms behind compact panel toggles; successful submit closes each panel.
+- 2026-06-05: Removed special protection from `General`; it can now be reordered or deleted, with sources moved to another group or `Ungrouped` fallback.
+- 2026-06-05: Made source unread counts more visible as badges and reduced OPML import/export button height.
+- 2026-06-05: Rewrote README as a full GitHub project README and added `docs/screenshots/rss-yo-preview.svg` as a repository screenshot preview.

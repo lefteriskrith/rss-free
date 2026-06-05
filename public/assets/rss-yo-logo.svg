@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="RSS Yo logo">
+  <rect width="256" height="256" rx="42" fill="#ff7a1a"/>
+  <circle cx="75" cy="181" r="24" fill="#ffffff"/>
+  <path d="M66 116c42 0 75 34 75 75" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <path d="M66 60h78c29 0 52 23 52 52v78" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

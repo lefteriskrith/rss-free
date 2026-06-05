@@ -4,35 +4,45 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>RSS Yo</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/rss-yo-logo.svg">
+    <link rel="apple-touch-icon" href="/assets/rss-yo-logo.svg">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <span class="brand-mark">RY</span>
+          <img class="brand-mark" src="/assets/rss-yo-logo.svg" alt="RSS Yo logo">
           <div>
             <h1>RSS Yo</h1>
             <p>Personal feeds from RSS and regular sites.</p>
           </div>
         </div>
 
-        <form id="add-source-form" class="add-form">
-          <label for="source-url">Add website or feed</label>
-          <div class="input-row">
-            <input id="source-url" name="url" type="url" placeholder="https://example.com" required>
-            <button type="submit">Add</button>
+        <section class="sidebar-panel collapsed" id="add-source-panel">
+          <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="add-source-form">Add website or feed</button>
+          <div class="panel-body">
+            <form id="add-source-form" class="add-form">
+              <div class="input-row">
+                <input id="source-url" name="url" type="url" placeholder="https://example.com" required>
+                <button type="submit">Add</button>
+              </div>
+              <select id="source-group" aria-label="Choose source group"></select>
+            </form>
           </div>
-          <select id="source-group" aria-label="Choose source group"></select>
-        </form>
+        </section>
 
-        <form id="add-group-form" class="group-form">
-          <label for="group-name">Create group</label>
-          <div class="input-row">
-            <input id="group-name" name="group" type="text" placeholder="Tech, News, Blogs">
-            <button type="submit">Create</button>
+        <section class="sidebar-panel collapsed" id="add-group-panel">
+          <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="add-group-form">Create group</button>
+          <div class="panel-body">
+            <form id="add-group-form" class="group-form">
+              <div class="input-row">
+                <input id="group-name" name="group" type="text" placeholder="Tech, News, Blogs">
+                <button type="submit">Create</button>
+              </div>
+            </form>
           </div>
-        </form>
+        </section>
 
         <div class="source-actions">
           <label class="file-button" for="opml-import">Import OPML</label>
@@ -73,11 +83,14 @@
 
     <template id="source-template">
       <li class="source-item">
-        <div>
-          <strong></strong>
+        <button class="source-select" type="button">
+          <span class="source-title-row">
+            <strong></strong>
+            <em class="source-unread"></em>
+          </span>
           <small></small>
           <span></span>
-        </div>
+        </button>
         <select class="source-group-select" aria-label="Move source to group"></select>
         <div class="source-buttons">
           <button class="mark-source-read" type="button">Mark read</button>

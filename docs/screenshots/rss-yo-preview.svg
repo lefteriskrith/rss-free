@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="860" viewBox="0 0 1440 860" role="img" aria-label="RSS Yo app screenshot preview">
+  <rect width="1440" height="860" fill="#000"/>
+  <rect x="0" y="0" width="310" height="860" fill="#050607"/>
+  <rect x="310" y="0" width="1" height="860" fill="#2f3742"/>
+  <rect x="36" y="34" width="44" height="44" rx="9" fill="#ff7a1a"/>
+  <circle cx="49" cy="64" r="5" fill="#fff"/>
+  <path d="M47 51c18 0 31 14 31 31" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+  <path d="M47 39h28c13 0 24 11 24 24v28" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="94" y="54" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="800">RSS Yo</text>
+  <text x="94" y="80" fill="#c9d1d9" font-family="Segoe UI, Arial, sans-serif" font-size="15">Personal feeds from RSS and regular sites.</text>
+
+  <rect x="36" y="126" width="236" height="38" rx="6" fill="#11151a" stroke="#2f3742"/>
+  <text x="52" y="150" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">ADD WEBSITE OR FEED</text>
+  <text x="226" y="150" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="12">Open</text>
+  <rect x="36" y="174" width="236" height="38" rx="6" fill="#11151a" stroke="#2f3742"/>
+  <text x="52" y="198" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">CREATE GROUP</text>
+  <text x="226" y="198" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="12">Open</text>
+  <rect x="36" y="226" width="110" height="30" rx="6" fill="#11151a" stroke="#2f3742"/>
+  <rect x="154" y="226" width="118" height="30" rx="6" fill="#11151a" stroke="#2f3742"/>
+  <text x="55" y="246" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="13">Import OPML</text>
+  <text x="172" y="246" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="13">Export OPML</text>
+
+  <text x="36" y="306" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="800">SOURCES</text>
+  <text x="256" y="306" fill="#c9d1d9" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">19</text>
+  <line x1="36" y1="322" x2="272" y2="322" stroke="#2f3742"/>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="36" y="338" width="28" height="34" rx="6" fill="#050607" stroke="#2f3742"/>
+    <rect x="70" y="338" width="50" height="34" rx="16" fill="#050607" stroke="#2f3742"/>
+    <rect x="126" y="338" width="116" height="34" rx="6" fill="#0d0f12"/>
+    <rect x="248" y="338" width="24" height="34" rx="6" fill="#050607" stroke="#2f3742"/>
+    <text x="46" y="360" fill="#fff" font-size="14">::</text>
+    <text x="82" y="360" fill="#fff" font-size="12" font-weight="800">Show</text>
+    <text x="136" y="360" fill="#00d5ff" font-size="14" font-weight="800">GENERAL</text>
+    <text x="226" y="360" fill="#c9d1d9" font-size="13" font-weight="800">0</text>
+    <text x="257" y="360" fill="#ff6b7a" font-size="13">x</text>
+
+    <rect x="36" y="388" width="28" height="34" rx="6" fill="#050607" stroke="#2f3742"/>
+    <rect x="70" y="388" width="50" height="34" rx="16" fill="#050607" stroke="#2f3742"/>
+    <rect x="126" y="388" width="116" height="34" rx="6" fill="#0d0f12"/>
+    <rect x="248" y="388" width="24" height="34" rx="6" fill="#050607" stroke="#2f3742"/>
+    <text x="46" y="410" fill="#fff" font-size="14">::</text>
+    <text x="82" y="410" fill="#fff" font-size="12" font-weight="800">Hide</text>
+    <text x="136" y="410" fill="#00d5ff" font-size="14" font-weight="800">SKATE</text>
+    <text x="218" y="410" fill="#c9d1d9" font-size="13" font-weight="800">158</text>
+    <text x="257" y="410" fill="#ff6b7a" font-size="13">x</text>
+
+    <line x1="54" y1="430" x2="54" y2="620" stroke="#2f3742"/>
+    <rect x="54" y="444" width="218" height="102" rx="7" fill="#000" stroke="#2f3742"/>
+    <text x="70" y="472" fill="#fff" font-size="13">http://skateplaza.gr/rss</text>
+    <rect x="228" y="456" width="30" height="22" rx="11" fill="#11151a" stroke="#2f3742"/>
+    <text x="239" y="472" fill="#fff" font-size="12" font-weight="800">42</text>
+    <text x="70" y="492" fill="#00d5ff" font-size="12" font-weight="700">skate</text>
+    <rect x="70" y="506" width="86" height="30" rx="6" fill="#11151a" stroke="#2f3742"/>
+    <rect x="164" y="506" width="82" height="30" rx="6" fill="#11151a" stroke="#2f3742"/>
+    <text x="86" y="526" fill="#fff" font-size="13">Mark read</text>
+    <text x="184" y="526" fill="#fff" font-size="13">Copy RSS</text>
+  </g>
+
+  <text x="378" y="54" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="800">Feed</text>
+  <text x="378" y="82" fill="#c9d1d9" font-family="Segoe UI, Arial, sans-serif" font-size="15">Opened Skate.</text>
+  <rect x="1048" y="34" width="104" height="40" rx="6" fill="#00d5ff"/>
+  <text x="1070" y="59" fill="#001014" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="800">Refresh all</text>
+  <rect x="1162" y="34" width="92" height="40" rx="6" fill="#11151a" stroke="#2f3742"/>
+  <text x="1194" y="59" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="15">Light</text>
+  <rect x="1264" y="34" width="104" height="40" rx="6" fill="#11151a" stroke="#2f3742"/>
+  <text x="1282" y="59" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="15">All groups</text>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="378" y="110" width="1010" height="132" rx="8" fill="#0d0f12" stroke="#2f3742"/>
+    <rect x="378" y="110" width="48" height="132" fill="#050607" stroke="#2f3742"/>
+    <circle cx="402" cy="176" r="7" fill="none" stroke="#8b949e" stroke-width="2"/>
+    <text x="452" y="144" fill="#c9d1d9" font-size="13">XDA  Jun 5, 2026</text>
+    <text x="452" y="174" fill="#c9d1d9" font-size="18" font-weight="800">I built a Python utility using Claude to automate my image editing workflow</text>
+    <text x="452" y="204" fill="#c9d1d9" font-size="16">Vibe-coding your problems away does not get easier than this.</text>
+
+    <rect x="378" y="258" width="1010" height="132" rx="8" fill="#0d0f12" stroke="#2f3742"/>
+    <rect x="378" y="258" width="48" height="132" fill="#050607" stroke="#2f3742"/>
+    <circle cx="402" cy="324" r="7" fill="none" stroke="#8b949e" stroke-width="2"/>
+    <text x="452" y="292" fill="#c9d1d9" font-size="13">in.gr  Jun 5, 2026</text>
+    <text x="452" y="322" fill="#c9d1d9" font-size="18" font-weight="800">Φινλανδία: Τέσσερα άτομα είναι ύποπτα για ζημιές σε υποβρύχια καλώδια</text>
+    <text x="452" y="352" fill="#c9d1d9" font-size="16">A clean reader-style list with source, date, title, excerpt, and original links.</text>
+
+    <rect x="378" y="406" width="1010" height="132" rx="8" fill="#0d0f12" stroke="#2f3742"/>
+    <rect x="378" y="406" width="48" height="132" fill="#050607" stroke="#2f3742"/>
+    <circle cx="402" cy="472" r="7" fill="none" stroke="#8b949e" stroke-width="2"/>
+    <text x="452" y="440" fill="#c9d1d9" font-size="13">SecNews.gr  Jun 5, 2026</text>
+    <text x="452" y="470" fill="#c9d1d9" font-size="18" font-weight="800">iOS 27: Μεγαλύτερη διάρκεια μπαταρίας για περισσότερη χρήση</text>
+    <text x="452" y="500" fill="#c9d1d9" font-size="16">Unread counts, groups, OPML import/export, and generated RSS XML.</text>
+  </g>
+</svg>

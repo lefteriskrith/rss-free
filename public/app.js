@@ -3,12 +3,15 @@ const STORAGE_KEY = "rss-yo-state-v1";
 const state = loadState();
 let currentFilter = "all";
 let currentGroup = "all";
+let currentSource = "all";
 let readObserver;
 let renderTimer;
+let draggedGroup = "";
 
 const elements = {
   addForm: document.querySelector("#add-source-form"),
   addGroupForm: document.querySelector("#add-group-form"),
+  sidebarPanels: document.querySelectorAll(".sidebar-panel"),
   sourceUrl: document.querySelector("#source-url"),
   sourceGroup: document.querySelector("#source-group"),
   groupName: document.querySelector("#group-name"),
@@ -27,6 +30,7 @@ const elements = {
 };
 
 applyTheme();
+bindSidebarPanels();
 render();
 
 elements.addForm.addEventListener("submit", async (event) => {
@@ -35,6 +39,7 @@ elements.addForm.addEventListener("submit", async (event) => {
   if (!url) return;
   await addOrRefreshSource(url, { group: elements.sourceGroup.value || "General" });
   elements.sourceUrl.value = "";
+  closeSidebarPanel("add-source-panel");
 });
 
 elements.addGroupForm.addEventListener("submit", (event) => {
@@ -42,11 +47,13 @@ elements.addGroupForm.addEventListener("submit", (event) => {
   const groupName = normalizeGroup(elements.groupName.value);
   if (!groupName) return;
   ensureGroup(groupName);
+  setGroupCollapsed(groupName, false);
   elements.sourceGroup.value = groupName;
   elements.groupName.value = "";
   saveState();
   render();
   setStatus(`Created group ${groupName}.`);
+  closeSidebarPanel("add-group-panel");
 });
 
 elements.refreshAll.addEventListener("click", async () => {
@@ -69,15 +76,13 @@ elements.importOpml.addEventListener("change", async (event) => {
   if (!file) return;
   const text = await file.text();
   const entries = parseOpmlEntries(text);
-  for (const entry of entries) {
-    await addOrRefreshSource(entry.url, { quiet: true, group: entry.group });
-  }
-  setStatus(`Imported ${entries.length} source${entries.length === 1 ? "" : "s"} from OPML.`);
+  await importOpmlEntries(entries);
   elements.importOpml.value = "";
 });
 
 elements.groupFilter.addEventListener("change", () => {
   currentGroup = elements.groupFilter.value;
+  currentSource = "all";
   render();
 });
 
@@ -95,7 +100,7 @@ async function addOrRefreshSource(url, options = {}) {
   try {
     const result = await fetchJson(`/api/discover?url=${encodeURIComponent(url)}`);
     const sourceId = canonicalUrl(result.feedUrl || result.siteUrl || url);
-    const existing = state.sources.find((source) => source.id === sourceId || source.inputUrl === url);
+    const existing = findExistingSource(result, url, sourceId);
     const source = existing || {
       id: sourceId,
       inputUrl: url,
@@ -116,6 +121,7 @@ async function addOrRefreshSource(url, options = {}) {
     source.group = normalizeGroup(options.group) || source.group || "General";
     source.lastChecked = new Date().toISOString();
     ensureGroup(source.group);
+    setGroupCollapsed(source.group, false);
 
     if (!existing) state.sources.push(source);
 
@@ -189,6 +195,87 @@ function mergePosts(posts, source) {
   return added;
 }
 
+function findExistingSource(result, originalUrl, sourceId) {
+  const incoming = sourceFingerprints({
+    id: sourceId,
+    inputUrl: originalUrl,
+    siteUrl: result.siteUrl,
+    feedUrl: result.feedUrl
+  });
+
+  return state.sources.find((source) => {
+    const stored = sourceFingerprints(source);
+    return [...incoming].some((fingerprint) => stored.has(fingerprint));
+  });
+}
+
+function sourceFingerprints(source) {
+  const urls = [source.id, source.inputUrl, source.siteUrl, source.feedUrl].filter(Boolean);
+  const fingerprints = new Set();
+
+  urls.forEach((url) => {
+    const canonical = canonicalUrl(url);
+    fingerprints.add(canonical);
+    fingerprints.add(canonical.replace(/\/$/, ""));
+    fingerprints.add(canonical.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, ""));
+  });
+
+  return fingerprints;
+}
+
+async function importOpmlEntries(entries) {
+  const importedGroups = [...new Set(entries.map((entry) => normalizeGroup(entry.group) || "General"))];
+  let moved = 0;
+  let addedOrRefreshed = 0;
+
+  importedGroups.forEach((group) => {
+    ensureGroup(group);
+    setGroupCollapsed(group, false);
+  });
+
+  render();
+  setStatus(`Found ${importedGroups.length} group${importedGroups.length === 1 ? "" : "s"} in OPML. Organizing sources...`);
+
+  const missingEntries = [];
+
+  entries.forEach((entry) => {
+    const group = normalizeGroup(entry.group) || "General";
+    const existing = findExistingSourceByUrl(entry.url);
+
+    if (existing) {
+      if (existing.group !== group) moved += 1;
+      existing.group = group;
+      ensureGroup(group);
+      setGroupCollapsed(group, false);
+      return;
+    }
+
+    missingEntries.push({ ...entry, group });
+  });
+
+  saveState();
+  render();
+
+  for (const entry of missingEntries) {
+    await addOrRefreshSource(entry.url, { quiet: true, group: entry.group });
+    addedOrRefreshed += 1;
+  }
+
+  saveState();
+  render();
+  setStatus(
+    `Imported ${entries.length} source${entries.length === 1 ? "" : "s"} into ${importedGroups.length} group${importedGroups.length === 1 ? "" : "s"}; moved ${moved}, fetched ${addedOrRefreshed}.`
+  );
+}
+
+function findExistingSourceByUrl(url) {
+  const incoming = sourceFingerprints({ id: url, inputUrl: url, siteUrl: url, feedUrl: url });
+  return state.sources.find((source) => {
+    const stored = sourceFingerprints(source);
+    return [...incoming].some((fingerprint) => stored.has(fingerprint));
+  });
+}
+
 function render() {
   normalizeState();
   renderGroupControls();
@@ -203,19 +290,93 @@ function renderSources() {
   elements.sourcesList.innerHTML = "";
   elements.sourceCount.textContent = String(state.sources.length);
 
-  groupedSources().forEach(([groupName, sources]) => {
+  state.groups.forEach((groupName) => {
+    const sources = state.sources
+      .filter((source) => source.group === groupName)
+      .sort((a, b) => a.title.localeCompare(b.title));
+    const unreadCount = sources.reduce((total, source) => total + unreadCountForSource(source.id), 0);
+    const isCollapsed = isGroupCollapsed(groupName);
+    const displayName = displayGroupName(groupName);
     const heading = document.createElement("li");
     heading.className = "group-heading";
-    heading.textContent = groupName;
+    heading.dataset.group = groupName;
+    heading.draggable = true;
+    heading.classList.toggle("active", currentGroup === groupName && currentSource === "all");
+    heading.classList.toggle("collapsed", isCollapsed);
+    heading.innerHTML = `
+      <button class="group-drag" type="button" title="Drag to reorder" aria-label="Drag ${escapeHtml(displayName)}">::</button>
+      <button class="group-toggle" type="button" aria-expanded="${String(!isCollapsed)}">${isCollapsed ? "Show" : "Hide"}</button>
+      <button class="group-view" type="button" aria-label="Show unread from ${escapeHtml(displayName)}">
+        <span class="group-name">${escapeHtml(displayName)}</span>
+        <em>${unreadCount}</em>
+      </button>
+      <button class="group-delete" type="button" title="Delete group" aria-label="Delete ${escapeHtml(displayName)}">x</button>`;
+    heading.addEventListener("dragstart", (event) => {
+      draggedGroup = groupName;
+      heading.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", groupName);
+    });
+    heading.addEventListener("dragend", () => {
+      draggedGroup = "";
+      heading.classList.remove("dragging");
+    });
+    heading.addEventListener("dragover", (event) => {
+      if (!draggedGroup || draggedGroup === groupName) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      heading.classList.add("drag-over");
+    });
+    heading.addEventListener("dragleave", () => {
+      heading.classList.remove("drag-over");
+    });
+    heading.addEventListener("drop", (event) => {
+      event.preventDefault();
+      heading.classList.remove("drag-over");
+      reorderGroup(draggedGroup, groupName);
+    });
+    heading.querySelector(".group-view").addEventListener("click", () => {
+      currentGroup = groupName;
+      currentSource = "all";
+      currentFilter = "unread";
+      elements.groupFilter.value = groupName;
+      render();
+      setStatus(`Showing unread from ${displayName}.`);
+    });
+    heading.querySelector(".group-toggle").addEventListener("click", (event) => {
+      event.stopPropagation();
+      setGroupCollapsed(groupName, !isCollapsed);
+      render();
+      setStatus(`${isCollapsed ? "Opened" : "Closed"} ${displayName}.`);
+    });
+    heading.querySelector(".group-delete").addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteGroup(groupName);
+    });
     elements.sourcesList.appendChild(heading);
+
+    if (isCollapsed) return;
 
     sources.forEach((source) => {
     const fragment = elements.sourceTemplate.content.cloneNode(true);
     const item = fragment.querySelector(".source-item");
     const groupSelect = item.querySelector(".source-group-select");
+    const sourceSelect = item.querySelector(".source-select");
+    const sourceUnread = unreadCountForSource(source.id);
+    item.classList.toggle("active", currentSource === source.id);
     item.querySelector("strong").textContent = source.title;
+    item.querySelector(".source-unread").textContent = String(sourceUnread);
+    item.querySelector(".source-unread").title = `${sourceUnread} unread`;
     item.querySelector("small").textContent = source.group || "General";
     item.querySelector("span").textContent = source.mode === "rss" ? source.feedUrl : source.siteUrl;
+
+    sourceSelect.addEventListener("click", () => {
+      currentSource = source.id;
+      currentGroup = "all";
+      elements.groupFilter.value = "all";
+      render();
+      setStatus(`Showing ${source.title}.`);
+    });
 
     state.groups.forEach((group) => {
       groupSelect.appendChild(new Option(group, group, false, group === source.group));
@@ -314,6 +475,7 @@ function renderPosts() {
 function filteredPosts() {
   return state.posts
     .filter((post) => {
+      if (currentSource !== "all" && post.sourceId !== currentSource) return false;
       if (currentGroup !== "all" && sourceGroupForPost(post) !== currentGroup) return false;
       if (currentFilter === "read") return post.read;
       if (currentFilter === "unread") return !post.read;
@@ -379,11 +541,40 @@ function parseOpmlEntries(text) {
     .map((outline) => {
       const url = outline.getAttribute("xmlUrl") || outline.getAttribute("htmlUrl") || outline.getAttribute("url");
       if (!url) return null;
-      const parent = outline.parentElement?.tagName?.toLowerCase() === "outline" ? outline.parentElement : null;
-      const group = normalizeGroup(parent?.getAttribute("title") || parent?.getAttribute("text")) || "General";
+      const group = getOutlineGroup(outline);
       return { url, group };
     })
     .filter(Boolean);
+}
+
+function getOutlineGroup(outline) {
+  return groupFromCategory(outline.getAttribute("category")) || groupFromParentOutline(outline) || "General";
+}
+
+function groupFromCategory(category) {
+  const value = normalizeGroup(category);
+  if (!value) return "";
+  const first = value.split(",")[0].trim();
+  const clean = first
+    .split("/")
+    .map((part) => normalizeGroup(part))
+    .filter(Boolean)
+    .at(-1);
+  return clean || "";
+}
+
+function groupFromParentOutline(outline) {
+  let parent = outline.parentElement;
+
+  while (parent && parent.tagName?.toLowerCase() !== "body") {
+    if (parent.tagName?.toLowerCase() === "outline") {
+      const group = normalizeGroup(parent.getAttribute("title") || parent.getAttribute("text"));
+      if (group) return group;
+    }
+    parent = parent.parentElement;
+  }
+
+  return "";
 }
 
 async function fetchJson(url) {
@@ -402,10 +593,11 @@ function loadState() {
       sources: stored.sources || [],
       posts: stored.posts || [],
       groups: stored.groups || [],
+      collapsedGroups: stored.collapsedGroups || {},
       theme: stored.theme || "light"
     };
   } catch {
-    return { sources: [], posts: [], groups: ["General"], theme: "light" };
+    return { sources: [], posts: [], groups: ["General"], collapsedGroups: {}, theme: "light" };
   }
 }
 
@@ -427,16 +619,63 @@ function applyTheme() {
   elements.themeToggle.textContent = state.theme === "dark" ? "Light" : "Dark";
 }
 
-function normalizeState() {
-  state.groups = [...new Set(["General", ...(state.groups || []), ...state.sources.map((source) => source.group || "General")])];
-  state.sources.forEach((source) => {
-    source.group = normalizeGroup(source.group) || "General";
+function bindSidebarPanels() {
+  elements.sidebarPanels.forEach((panel) => {
+    const toggle = panel.querySelector(".panel-toggle");
+    toggle.addEventListener("click", () => {
+      setSidebarPanelOpen(panel, panel.classList.contains("collapsed"));
+    });
   });
 }
 
+function setSidebarPanelOpen(panel, isOpen) {
+  panel.classList.toggle("collapsed", !isOpen);
+  panel.querySelector(".panel-toggle").setAttribute("aria-expanded", String(isOpen));
+}
+
+function closeSidebarPanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel) setSidebarPanelOpen(panel, false);
+}
+
+function normalizeState() {
+  const before = JSON.stringify({
+    groups: state.groups,
+    collapsedGroups: state.collapsedGroups,
+    sourceGroups: state.sources.map((source) => source.group)
+  });
+
+  state.collapsedGroups = state.collapsedGroups || {};
+  const existingGroups = [...new Set((state.groups || []).map((group) => normalizeGroup(group)).filter(Boolean))];
+  const fallbackGroup = existingGroups[0] || "General";
+
+  state.sources.forEach((source) => {
+    source.group = normalizeGroup(source.group) || fallbackGroup;
+  });
+  state.groups = [
+    ...new Set([
+      ...existingGroups,
+      ...state.sources.map((source) => source.group)
+    ])
+  ];
+  if (!state.groups.length) state.groups = ["General"];
+  state.collapsedGroups = Object.fromEntries(
+    Object.entries(state.collapsedGroups)
+      .map(([group, collapsed]) => [normalizeGroup(group), Boolean(collapsed)])
+      .filter(([group]) => state.groups.includes(group))
+  );
+
+  const after = JSON.stringify({
+    groups: state.groups,
+    collapsedGroups: state.collapsedGroups,
+    sourceGroups: state.sources.map((source) => source.group)
+  });
+  if (before !== after) saveState();
+}
+
 function renderGroupControls() {
-  const selectedSourceGroup = elements.sourceGroup.value || "General";
-  const selectedFilterGroup = currentGroup;
+  const selectedSourceGroup = elements.sourceGroup.value || state.groups[0] || "General";
+  const selectedFilterGroup = currentSource === "all" ? currentGroup : "all";
 
   elements.sourceGroup.innerHTML = "";
   state.groups.forEach((group) => {
@@ -456,8 +695,56 @@ function ensureGroup(groupName) {
   return group;
 }
 
+function reorderGroup(fromGroup, toGroup) {
+  const from = normalizeGroup(fromGroup);
+  const to = normalizeGroup(toGroup);
+  if (!from || !to || from === to) return;
+
+  const groups = state.groups.filter((group) => group !== from);
+  const toIndex = groups.indexOf(to);
+  if (toIndex === -1) return;
+
+  groups.splice(toIndex, 0, from);
+  state.groups = groups;
+  saveState();
+  render();
+  setStatus(`Moved ${from} before ${to}.`);
+}
+
+function deleteGroup(groupName) {
+  const group = normalizeGroup(groupName);
+  if (!group) return;
+
+  const sourceCount = state.sources.filter((source) => source.group === group).length;
+  const remainingGroups = state.groups.filter((candidate) => candidate !== group);
+  const fallbackGroup = remainingGroups[0] || "Ungrouped";
+  const message = sourceCount
+    ? `Delete group "${group}" and move ${sourceCount} source${sourceCount === 1 ? "" : "s"} to ${fallbackGroup}?`
+    : `Delete empty group "${group}"?`;
+
+  if (!window.confirm(message)) return;
+
+  if (!remainingGroups.length) remainingGroups.push(fallbackGroup);
+  state.sources.forEach((source) => {
+    if (source.group === group) source.group = fallbackGroup;
+  });
+  state.groups = remainingGroups;
+  delete state.collapsedGroups[group];
+
+  if (currentGroup === group) currentGroup = "all";
+  if (!state.sources.some((source) => source.id === currentSource)) currentSource = "all";
+
+  saveState();
+  render();
+  setStatus(`${group} deleted. ${sourceCount ? `Sources moved to ${fallbackGroup}.` : ""}`);
+}
+
 function normalizeGroup(value) {
-  return String(value || "").replace(/\s+/g, " ").trim();
+  const group = String(value || "")
+    .replace(/^[\\/]+|[\\/]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return group === "." ? "" : group;
 }
 
 function groupedSources() {
@@ -475,6 +762,34 @@ function groupedSources() {
 
 function sourceGroupForPost(post) {
   return state.sources.find((source) => source.id === post.sourceId)?.group || "General";
+}
+
+function unreadCountForSource(sourceId) {
+  return state.posts.filter((post) => post.sourceId === sourceId && !post.read).length;
+}
+
+function isGroupCollapsed(groupName) {
+  return Boolean(state.collapsedGroups?.[groupName]);
+}
+
+function setGroupCollapsed(groupName, isCollapsed) {
+  state.collapsedGroups = state.collapsedGroups || {};
+  const group = normalizeGroup(groupName) || "General";
+  if (isCollapsed) {
+    state.collapsedGroups[group] = true;
+  } else {
+    delete state.collapsedGroups[group];
+  }
+}
+
+function displayGroupName(groupName) {
+  return normalizeGroup(groupName) || "General";
+}
+
+function escapeHtml(value) {
+  const element = document.createElement("div");
+  element.textContent = String(value || "");
+  return element.innerHTML;
 }
 
 function markSourceRead(sourceId) {
