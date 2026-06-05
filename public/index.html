@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RSS Yo</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">RY</span>
+          <div>
+            <h1>RSS Yo</h1>
+            <p>Personal feeds from RSS and regular sites.</p>
+          </div>
+        </div>
+
+        <form id="add-source-form" class="add-form">
+          <label for="source-url">Add website or feed</label>
+          <div class="input-row">
+            <input id="source-url" name="url" type="url" placeholder="https://example.com" required>
+            <button type="submit">Add</button>
+          </div>
+        </form>
+
+        <div class="source-actions">
+          <button id="refresh-all" type="button">Sync</button>
+          <label class="file-button" for="opml-import">Import OPML</label>
+          <input id="opml-import" type="file" accept=".opml,.xml,text/xml">
+          <button id="export-opml" type="button">Export OPML</button>
+        </div>
+
+        <section>
+          <div class="section-heading">
+            <h2>Sources</h2>
+            <span id="source-count">0</span>
+          </div>
+          <ul id="sources-list" class="sources-list"></ul>
+        </section>
+      </aside>
+
+      <main class="main">
+        <header class="toolbar">
+          <div>
+            <h2>Feed</h2>
+            <p id="status-text">Add a source to begin.</p>
+          </div>
+          <div class="filters" role="group" aria-label="Post filter">
+            <button class="filter active" data-filter="all" type="button">All</button>
+            <button class="filter" data-filter="unread" type="button">Unread</button>
+            <button class="filter" data-filter="read" type="button">Read</button>
+          </div>
+        </header>
+
+        <section id="feed-list" class="feed-list"></section>
+      </main>
+    </div>
+
+    <template id="source-template">
+      <li class="source-item">
+        <div>
+          <strong></strong>
+          <span></span>
+        </div>
+        <div class="source-buttons">
+          <button class="copy-rss" type="button">Copy RSS</button>
+          <button class="remove-source" type="button">Remove</button>
+        </div>
+      </li>
+    </template>
+
+    <template id="post-template">
+      <article class="post">
+        <button class="read-toggle" type="button"></button>
+        <a class="post-link" target="_blank" rel="noopener noreferrer">
+          <div class="post-meta">
+            <span class="source-name"></span>
+            <time></time>
+          </div>
+          <h3></h3>
+          <p></p>
+        </a>
+      </article>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
