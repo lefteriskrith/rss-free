@@ -26,8 +26,6 @@ When a website does not expose a feed, RSS Yo falls back to article-link extract
 - Show posts in a clean reader UI with source, date, title, excerpt, and original link.
 - Open posts in a new tab.
 - Mark posts read/unread manually.
-- Mark posts read on hover.
-- Mark posts read automatically as they pass through the reading view.
 - Right-click a post to mark it read/unread or add/remove it from Favorites.
 - Filter posts by All, Unread, or Read.
 - Filter posts by Favorites.
@@ -160,8 +158,6 @@ Read state can change in several ways:
 
 - click the read/unread circle;
 - click the post link;
-- hover over a post;
-- scroll past a post until it is sufficiently visible;
 - use `Mark read` on a source.
 - right-click a post and choose `Mark unread` to bring it back.
 

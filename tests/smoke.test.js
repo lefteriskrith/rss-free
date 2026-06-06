@@ -45,7 +45,6 @@ test("client script wires key reader behaviors", async () => {
     "groupFromCategory",
     "groupFromParentOutline",
     "buildOpml",
-    "observeUnreadPosts",
     "bindPostContextMenu",
     "showPostContextMenu",
     "hidePostContextMenu",
@@ -53,7 +52,6 @@ test("client script wires key reader behaviors", async () => {
     "findExistingSource",
     "findExistingSourceByUrl",
     "sourceFingerprints",
-    "mouseenter",
     "contextmenu",
     "favorite",
     "markSourceRead",
@@ -80,6 +78,8 @@ test("client script wires key reader behaviors", async () => {
 
   assert.ok(!script.includes('document.createElement("template")'), "HTML escaping should not use template elements.");
   assert.ok(!script.includes('groupName === "General" ? " disabled"'), "General group delete should not be disabled.");
+  assert.ok(!script.includes("IntersectionObserver"), "Posts should not be auto-marked read by viewport visibility.");
+  assert.ok(!script.includes('addEventListener("mouseenter"'), "Posts should not be auto-marked read on hover.");
 });
 
 test("stylesheet includes dark theme and group styles", async () => {

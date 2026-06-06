@@ -31,8 +31,7 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Posts are deduplicated by canonical URL.
 - Feed view shows title, source, date, excerpt, original link, and read/unread state.
 - Clicking a post opens the original URL in a new tab and marks it read.
-- Hovering over a post marks it read.
-- Scrolling past unread posts marks them read when they are sufficiently visible.
+- Posts must not become read automatically merely from hover or scroll visibility.
 - Right-clicking a post opens actions for mark read/unread and favorite/unfavorite.
 - Filters: All, Unread, Read, Favorites.
 - `Refresh all` checks every saved source again and adds new posts.
@@ -133,3 +132,5 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - 2026-06-05: Rewrote README as a full GitHub project README and added `docs/screenshots/rss-yo-preview.svg` as a repository screenshot preview.
 - 2026-06-05: Moved per-source group selection and delete into an `Edit` panel; source action buttons were made smaller.
 - 2026-06-05: Added post right-click context menu for mark read/unread and favorite/unfavorite, plus a Favorites feed filter.
+- 2026-06-06: Removed hover/scroll auto-read behavior; posts now become read only from explicit actions such as opening, toggling, context menu, or source mark-read.
+- 2026-06-06: Changed source unread badge row from `span` to `div` to prevent global span styles from hiding the per-feed unread count.

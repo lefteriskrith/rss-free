@@ -4,8 +4,6 @@ const state = loadState();
 let currentFilter = "all";
 let currentGroup = "all";
 let currentSource = "all";
-let readObserver;
-let renderTimer;
 let draggedGroup = "";
 let contextPostId = "";
 
@@ -427,7 +425,6 @@ function renderSources() {
 }
 
 function renderPosts() {
-  disconnectReadObserver();
   elements.feedList.innerHTML = "";
   const posts = filteredPosts();
 
@@ -464,16 +461,6 @@ function renderPosts() {
       render();
     });
 
-    article.addEventListener("mouseenter", () => {
-      if (post.read) return;
-      post.read = true;
-      article.classList.add("read");
-      toggle.title = "Mark unread";
-      toggle.setAttribute("aria-label", "Mark unread");
-      saveState();
-      if (currentFilter !== "all") scheduleRender();
-    });
-
     article.addEventListener("contextmenu", (event) => {
       event.preventDefault();
       showPostContextMenu(post.id, event.clientX, event.clientY);
@@ -487,8 +474,6 @@ function renderPosts() {
 
     elements.feedList.appendChild(fragment);
   });
-
-  observeUnreadPosts();
 }
 
 function filteredPosts() {
@@ -876,56 +861,6 @@ function markSourceRead(sourceId) {
     }
   });
   return count;
-}
-
-function observeUnreadPosts() {
-  if (!("IntersectionObserver" in window)) return;
-
-  readObserver = new IntersectionObserver(
-    (entries) => {
-      let changed = false;
-
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting || entry.intersectionRatio < 0.65) return;
-
-        const post = state.posts.find((candidate) => candidate.id === entry.target.dataset.postId);
-        if (!post || post.read) return;
-
-        post.read = true;
-        changed = true;
-        entry.target.classList.add("read");
-        const toggle = entry.target.querySelector(".read-toggle");
-        toggle.title = "Mark unread";
-        toggle.setAttribute("aria-label", "Mark unread");
-        readObserver.unobserve(entry.target);
-      });
-
-      if (changed) {
-        saveState();
-        if (currentFilter !== "all") scheduleRender();
-      }
-    },
-    {
-      threshold: [0.65],
-      rootMargin: "0px 0px -12% 0px"
-    }
-  );
-
-  document.querySelectorAll(".post:not(.read)").forEach((post) => {
-    readObserver.observe(post);
-  });
-}
-
-function disconnectReadObserver() {
-  if (readObserver) {
-    readObserver.disconnect();
-    readObserver = null;
-  }
-}
-
-function scheduleRender() {
-  clearTimeout(renderTimer);
-  renderTimer = setTimeout(render, 450);
 }
 
 function canonicalUrl(url) {
