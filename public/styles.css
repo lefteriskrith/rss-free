@@ -487,23 +487,12 @@ select {
   min-width: 96px;
 }
 
-.filters {
-  display: flex;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--panel);
+#mark-visible-read {
+  min-width: 118px;
 }
 
-.filters button {
-  border: 0;
-  border-radius: 0;
-  min-width: 76px;
-}
-
-.filters .active {
-  background: var(--text);
-  color: var(--bg);
+#read-filter {
+  min-width: 118px;
 }
 
 .feed-list {
@@ -672,8 +661,8 @@ select {
     flex: 1 1 120px;
   }
 
-  .filters,
-  .filters button {
-    width: 100%;
+  #group-filter,
+  #read-filter {
+    flex: 1 1 150px;
   }
 }

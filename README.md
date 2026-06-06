@@ -27,8 +27,8 @@ When a website does not expose a feed, RSS Yo falls back to article-link extract
 - Open posts in a new tab.
 - Mark posts read/unread manually.
 - Right-click a post to mark it read/unread or add/remove it from Favorites.
-- Filter posts by All, Unread, or Read.
-- Filter posts by Favorites.
+- Filter posts by Unread, All, Read, or Favorites from a dropdown.
+- Use `Mark read all` to mark every currently visible post as read.
 - Refresh all sources and add only new posts.
 - Deduplicate posts by canonical URL.
 - Import OPML from Feedly, Inoreader, and similar readers.
@@ -165,11 +165,13 @@ Favorites can be toggled by right-clicking a post and choosing `Add favorite` or
 
 The toolbar filters the feed by:
 
-- All;
+- selected group;
 - Unread;
+- All;
 - Read;
-- Favorites;
-- selected group.
+- Favorites.
+
+The read-state dropdown defaults to `Unread`.
 
 ## Groups And OPML
 
@@ -188,6 +190,7 @@ Groups in the sidebar support:
 
 - `Show` / `Hide` for expand/collapse;
 - click group name/count to show unread posts from that group;
+- right-click a group to mark every post from its sources as read;
 - drag handle `::` to reorder groups;
 - delete button `x`;
 - unread count badge.

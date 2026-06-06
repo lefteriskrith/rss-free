@@ -66,15 +66,16 @@
             <p id="status-text">Add a source to begin.</p>
           </div>
           <div class="toolbar-actions">
+            <button id="mark-visible-read" type="button">Mark read all</button>
             <button id="refresh-all" class="primary-action" type="button">Refresh all</button>
             <button id="theme-toggle" type="button">Dark</button>
             <select id="group-filter" aria-label="Filter by group"></select>
-            <div class="filters" role="group" aria-label="Post filter">
-              <button class="filter active" data-filter="all" type="button">All</button>
-              <button class="filter" data-filter="unread" type="button">Unread</button>
-              <button class="filter" data-filter="read" type="button">Read</button>
-              <button class="filter" data-filter="favorite" type="button">Favorites</button>
-            </div>
+            <select id="read-filter" aria-label="Filter by read state">
+              <option value="unread" selected>Unread</option>
+              <option value="all">All</option>
+              <option value="read">Read</option>
+              <option value="favorite">Favorites</option>
+            </select>
           </div>
         </header>
 
@@ -121,6 +122,10 @@
     <div id="post-context-menu" class="context-menu hidden" role="menu" aria-label="Post actions">
       <button id="context-read-toggle" type="button" role="menuitem">Mark unread</button>
       <button id="context-favorite-toggle" type="button" role="menuitem">Add favorite</button>
+    </div>
+
+    <div id="group-context-menu" class="context-menu hidden" role="menu" aria-label="Group actions">
+      <button id="context-group-read" type="button" role="menuitem">Mark group read</button>
     </div>
 
     <script src="/app.js" type="module"></script>

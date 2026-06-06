@@ -1,11 +1,12 @@
 const STORAGE_KEY = "rss-yo-state-v1";
 
 const state = loadState();
-let currentFilter = "all";
+let currentFilter = "unread";
 let currentGroup = "all";
 let currentSource = "all";
 let draggedGroup = "";
 let contextPostId = "";
+let contextGroupName = "";
 
 const elements = {
   addForm: document.querySelector("#add-source-form"),
@@ -16,6 +17,7 @@ const elements = {
   groupName: document.querySelector("#group-name"),
   groupFilter: document.querySelector("#group-filter"),
   refreshAll: document.querySelector("#refresh-all"),
+  markVisibleRead: document.querySelector("#mark-visible-read"),
   exportOpml: document.querySelector("#export-opml"),
   importOpml: document.querySelector("#opml-import"),
   themeToggle: document.querySelector("#theme-toggle"),
@@ -23,10 +25,12 @@ const elements = {
   sourceCount: document.querySelector("#source-count"),
   feedList: document.querySelector("#feed-list"),
   status: document.querySelector("#status-text"),
-  filterButtons: document.querySelectorAll(".filter"),
+  readFilter: document.querySelector("#read-filter"),
   contextMenu: document.querySelector("#post-context-menu"),
   contextReadToggle: document.querySelector("#context-read-toggle"),
   contextFavoriteToggle: document.querySelector("#context-favorite-toggle"),
+  groupContextMenu: document.querySelector("#group-context-menu"),
+  contextGroupRead: document.querySelector("#context-group-read"),
   sourceTemplate: document.querySelector("#source-template"),
   postTemplate: document.querySelector("#post-template")
 };
@@ -63,6 +67,13 @@ elements.refreshAll.addEventListener("click", async () => {
   await refreshAllSources();
 });
 
+elements.markVisibleRead.addEventListener("click", () => {
+  const count = markVisiblePostsRead();
+  saveState();
+  render();
+  setStatus(`Marked ${count} visible post${count === 1 ? "" : "s"} as read.`);
+});
+
 elements.themeToggle.addEventListener("click", () => {
   state.theme = state.theme === "dark" ? "light" : "dark";
   saveState();
@@ -89,11 +100,9 @@ elements.groupFilter.addEventListener("change", () => {
   render();
 });
 
-elements.filterButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    currentFilter = button.dataset.filter;
-    render();
-  });
+elements.readFilter.addEventListener("change", () => {
+  currentFilter = elements.readFilter.value;
+  render();
 });
 
 async function addOrRefreshSource(url, options = {}) {
@@ -285,9 +294,7 @@ function render() {
   renderGroupControls();
   renderSources();
   renderPosts();
-  elements.filterButtons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.filter === currentFilter);
-  });
+  elements.readFilter.value = currentFilter;
 }
 
 function renderSources() {
@@ -339,13 +346,24 @@ function renderSources() {
       heading.classList.remove("drag-over");
       reorderGroup(draggedGroup, groupName);
     });
+    heading.addEventListener("contextmenu", (event) => {
+      if (event.target.closest(".group-delete")) return;
+      event.preventDefault();
+      showGroupContextMenu(groupName, event.clientX, event.clientY);
+    });
     heading.querySelector(".group-view").addEventListener("click", () => {
       currentGroup = groupName;
       currentSource = "all";
       currentFilter = "unread";
       elements.groupFilter.value = groupName;
+      elements.readFilter.value = currentFilter;
       render();
       setStatus(`Showing unread from ${displayName}.`);
+    });
+    heading.querySelector(".group-view").addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      showGroupContextMenu(groupName, event.clientX, event.clientY);
     });
     heading.querySelector(".group-toggle").addEventListener("click", (event) => {
       event.stopPropagation();
@@ -656,9 +674,22 @@ function bindPostContextMenu() {
 
   document.addEventListener("click", (event) => {
     if (!elements.contextMenu.contains(event.target)) hidePostContextMenu();
+    if (!elements.groupContextMenu.contains(event.target)) hideGroupContextMenu();
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") hidePostContextMenu();
+    if (event.key === "Escape") {
+      hidePostContextMenu();
+      hideGroupContextMenu();
+    }
+  });
+
+  elements.contextGroupRead.addEventListener("click", () => {
+    const count = markGroupRead(contextGroupName);
+    const groupName = contextGroupName;
+    saveState();
+    hideGroupContextMenu();
+    render();
+    setStatus(`${groupName}: marked ${count} post${count === 1 ? "" : "s"} as read.`);
   });
 }
 
@@ -670,13 +701,7 @@ function showPostContextMenu(postId, x, y) {
   elements.contextReadToggle.textContent = post.read ? "Mark unread" : "Mark read";
   elements.contextFavoriteToggle.textContent = post.favorite ? "Remove favorite" : "Add favorite";
   elements.contextMenu.classList.remove("hidden");
-
-  const width = elements.contextMenu.offsetWidth || 180;
-  const height = elements.contextMenu.offsetHeight || 80;
-  const left = Math.min(x, window.innerWidth - width - 10);
-  const top = Math.min(y, window.innerHeight - height - 10);
-  elements.contextMenu.style.left = `${Math.max(10, left)}px`;
-  elements.contextMenu.style.top = `${Math.max(10, top)}px`;
+  placeContextMenu(elements.contextMenu, x, y);
 }
 
 function hidePostContextMenu() {
@@ -686,6 +711,27 @@ function hidePostContextMenu() {
 
 function findContextPost() {
   return state.posts.find((post) => post.id === contextPostId);
+}
+
+function showGroupContextMenu(groupName, x, y) {
+  contextGroupName = groupName;
+  elements.contextGroupRead.textContent = `Mark ${displayGroupName(groupName)} read`;
+  elements.groupContextMenu.classList.remove("hidden");
+  placeContextMenu(elements.groupContextMenu, x, y);
+}
+
+function hideGroupContextMenu() {
+  contextGroupName = "";
+  elements.groupContextMenu.classList.add("hidden");
+}
+
+function placeContextMenu(menu, x, y) {
+  const width = menu.offsetWidth || 190;
+  const height = menu.offsetHeight || 44;
+  const left = Math.min(x, window.innerWidth - width - 10);
+  const top = Math.min(y, window.innerHeight - height - 10);
+  menu.style.left = `${Math.max(10, left)}px`;
+  menu.style.top = `${Math.max(10, top)}px`;
 }
 
 function setSidebarPanelOpen(panel, isOpen) {
@@ -856,6 +902,30 @@ function markSourceRead(sourceId) {
   let count = 0;
   state.posts.forEach((post) => {
     if (post.sourceId === sourceId && !post.read) {
+      post.read = true;
+      count += 1;
+    }
+  });
+  return count;
+}
+
+function markGroupRead(groupName) {
+  const sourceIds = new Set(state.sources.filter((source) => source.group === groupName).map((source) => source.id));
+  let count = 0;
+  state.posts.forEach((post) => {
+    if (sourceIds.has(post.sourceId) && !post.read) {
+      post.read = true;
+      count += 1;
+    }
+  });
+  return count;
+}
+
+function markVisiblePostsRead() {
+  const posts = filteredPosts();
+  let count = 0;
+  posts.forEach((post) => {
+    if (!post.read) {
       post.read = true;
       count += 1;
     }

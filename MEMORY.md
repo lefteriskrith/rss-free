@@ -33,7 +33,9 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Clicking a post opens the original URL in a new tab and marks it read.
 - Posts must not become read automatically merely from hover or scroll visibility.
 - Right-clicking a post opens actions for mark read/unread and favorite/unfavorite.
-- Filters: All, Unread, Read, Favorites.
+- Right-clicking a group can mark every post from sources in that group as read.
+- The feed toolbar has `Mark read all` for marking the currently visible posts as read.
+- Filters are selected from a dropdown and default to Unread: Unread, All, Read, Favorites.
 - `Refresh all` checks every saved source again and adds new posts.
 
 ## Groups
@@ -134,3 +136,4 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - 2026-06-05: Added post right-click context menu for mark read/unread and favorite/unfavorite, plus a Favorites feed filter.
 - 2026-06-06: Removed hover/scroll auto-read behavior; posts now become read only from explicit actions such as opening, toggling, context menu, or source mark-read.
 - 2026-06-06: Changed source unread badge row from `span` to `div` to prevent global span styles from hiding the per-feed unread count.
+- 2026-06-06: Added group right-click `Mark group read`, toolbar `Mark read all` for visible posts, and replaced read-state buttons with a dropdown defaulting to `Unread`.
