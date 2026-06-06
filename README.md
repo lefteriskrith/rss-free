@@ -1,5 +1,7 @@
 # RSS Yo
 
+[![Windows portable](https://img.shields.io/badge/Windows-portable-2ea44f?style=for-the-badge)](release/RSS-Yo-1.0.0-portable.rar)
+
 RSS Yo is a local-first RSS reader and lightweight RSS generator for personal use. Add normal RSS/Atom feeds, paste regular website URLs, organize everything into groups, and read posts from one clean interface.
 
 It runs on your own machine with a small Node/Express server. There is no login, no hosted database, and no cloud account required. Your sources, groups, read state, favorites, theme, and posts are saved in browser `localStorage`.
@@ -7,8 +9,6 @@ It runs on your own machine with a small Node/Express server. There is no login,
 ![RSS Yo reader screenshot](docs/screenshots/rss-yo-reader.png)
 
 ## Download
-
-[![Download RSS Yo 1.0.0 for Windows](https://img.shields.io/badge/Download-Windows%20portable%20.rar-2ea44f?style=for-the-badge)](release/RSS-Yo-1.0.0-portable.rar)
 
 The packaged executable inside the release folder is:
 
