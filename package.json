@@ -3,10 +3,42 @@
   "version": "1.0.0",
   "description": "A simple self-hosted personal RSS reader and RSS generator.",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
+    "build:icon": "node scripts/create-windows-icon.js",
+    "desktop": "electron .",
     "dev": "node server.js",
+    "dist:win": "npm run build:icon && electron-builder --win portable",
     "start": "node server.js",
     "test": "node --test"
+  },
+  "build": {
+    "appId": "com.rssyo.app",
+    "productName": "RSS Yo",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "build/icon.ico",
+      "electron/**/*",
+      "public/**/*",
+      "server.js",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "RSS-Yo-${version}-portable.exe"
+    }
   },
   "dependencies": {
     "cheerio": "^1.0.0",
@@ -14,5 +46,8 @@
     "fast-xml-parser": "^4.4.1",
     "rss-parser": "^3.13.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "electron": "^42.3.3",
+    "electron-builder": "^26.15.0"
+  }
 }

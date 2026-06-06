@@ -17,6 +17,8 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Backend: Node.js + Express in `server.js`.
 - Local run: `npm install`, then `npm run dev`, then open `http://localhost:5173`.
 - Windows launcher: double-click `start-rss-yo.bat`; keep the terminal open while using the app.
+- Desktop exe: Electron portable Windows build via `npm run dist:win`; output goes to `release/RSS-Yo-1.0.0-portable.exe`.
+- Windows exe icon: generated at `build/icon.ico` from the orange RSS Yo logo via `npm run build:icon`.
 - Persistence: browser `localStorage` under `rss-yo-state-v1`.
 - No login and no database in v1.
 
@@ -82,6 +84,9 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - If the user asks to "make an exe" or "vgale mou exe", use Electron for the v1 desktop build.
 - Reason: Electron best matches the current HTML/CSS/JS + Node/Express architecture and can bundle/run the local backend with fewer surprises.
 - Expected v1 behavior: launching the `.exe` starts the local server automatically and opens RSS Yo in a desktop app window or local browser.
+- Implemented v1 desktop behavior: Electron starts the Express app internally on `127.0.0.1:51733` and opens RSS Yo in a desktop window.
+- The fixed desktop port is intentional so Electron localStorage keeps the same origin between launches.
+- `npm run dist:win` runs `npm run build:icon` first and embeds `build/icon.ico` as the Windows app icon.
 - Tauri remains a possible later optimization for a smaller/lighter app, but not the preferred first executable path.
 - Desktop sync across multiple PCs is not automatic; it will require a backend account/database, shared cloud JSON file, or manual import/export.
 
@@ -137,3 +142,5 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - 2026-06-06: Removed hover/scroll auto-read behavior; posts now become read only from explicit actions such as opening, toggling, context menu, or source mark-read.
 - 2026-06-06: Changed source unread badge row from `span` to `div` to prevent global span styles from hiding the per-feed unread count.
 - 2026-06-06: Added group right-click `Mark group read`, toolbar `Mark read all` for visible posts, and replaced read-state buttons with a dropdown defaulting to `Unread`.
+- 2026-06-06: Added Electron desktop packaging with `electron/main.js`, `npm run desktop`, and `npm run dist:win`; the portable exe starts the local server automatically on fixed port `51733`.
+- 2026-06-06: Added `scripts/create-windows-icon.js` to generate `build/icon.ico` from the orange RSS Yo logo and embed it in the Windows exe.

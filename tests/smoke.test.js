@@ -126,3 +126,27 @@ test("logo asset is available as an SVG favicon", async () => {
   assert.ok(logo.includes("<svg"), "Logo should be an SVG file.");
   assert.ok(logo.includes("#ff7a1a"), "Logo should use the orange RSS brand color.");
 });
+
+test("desktop package scripts and Electron entrypoint are wired", async () => {
+  const pkg = JSON.parse(await readFile("package.json", "utf8"));
+  const electronMain = await readFile("electron/main.js", "utf8");
+
+  assert.equal(pkg.main, "electron/main.js");
+  assert.equal(pkg.scripts["build:icon"], "node scripts/create-windows-icon.js");
+  assert.equal(pkg.scripts.desktop, "electron .");
+  assert.ok(pkg.scripts["dist:win"].includes("electron-builder"));
+  assert.equal(pkg.build.productName, "RSS Yo");
+  assert.equal(pkg.build.win.icon, "build/icon.ico");
+  assert.ok(electronMain.includes("DESKTOP_PORT"));
+  assert.ok(electronMain.includes("51733"));
+  assert.ok(electronMain.includes("ICON_PATH"));
+  assert.ok(electronMain.includes("expressApp.listen"));
+});
+
+test("Windows icon generator is available", async () => {
+  const iconScript = await readFile("scripts/create-windows-icon.js", "utf8");
+
+  assert.ok(iconScript.includes("build/icon.ico"));
+  assert.ok(iconScript.includes("ORANGE"));
+  assert.ok(iconScript.includes("WHITE"));
+});

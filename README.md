@@ -45,6 +45,7 @@ When a website does not expose a feed, RSS Yo falls back to article-link extract
 - Use a custom orange RSS logo as the app header mark and browser favicon.
 - Run locally with `npm install` and `npm run dev`.
 - Windows launcher included: `start-rss-yo.bat`.
+- Build a portable Windows desktop app with Electron.
 
 ## Project Structure
 
@@ -59,6 +60,10 @@ rss-yo/
   docs/
     screenshots/
       rss-yo-preview.svg
+  electron/
+    main.js
+  scripts/
+    create-windows-icon.js
   tests/
     server.test.js
     smoke.test.js
@@ -96,6 +101,40 @@ start-rss-yo.bat
 ```
 
 The batch file installs dependencies if needed, starts the local Node server, and opens the app in your browser. Keep that terminal window open while using RSS Yo.
+
+## Windows Desktop EXE
+
+RSS Yo can also run as an autonomous Windows desktop app through Electron.
+
+Build the portable `.exe`:
+
+```bash
+npm run dist:win
+```
+
+This also generates `build/icon.ico` from the orange RSS Yo logo and embeds it as the Windows app icon.
+
+The generated app is written to:
+
+```text
+release/RSS-Yo-1.0.0-portable.exe
+```
+
+Double-clicking that file starts RSS Yo by itself. You do not need to run `npm run dev` or keep `start-rss-yo.bat` open.
+
+The desktop build starts its own local Express server on:
+
+```text
+http://127.0.0.1:51733
+```
+
+This fixed local address keeps Electron's localStorage stable between launches. If another program is already using port `51733`, close that program or set another port before building/running.
+
+Run the desktop app without packaging during development:
+
+```bash
+npm run desktop
+```
 
 ## Why A Server Is Needed
 
@@ -233,6 +272,18 @@ npm run dev
 Starts the local Express server on `http://localhost:5173`.
 
 ```bash
+npm run desktop
+```
+
+Starts the Electron desktop wrapper and its local server.
+
+```bash
+npm run dist:win
+```
+
+Builds a portable Windows `.exe` in `release/`.
+
+```bash
 npm start
 ```
 
@@ -301,6 +352,8 @@ Node hosting works more directly:
 - local PC.
 
 For a future Windows `.exe`, the project decision recorded in `MEMORY.md` is to use Electron first, because it best matches the current HTML/CSS/JS plus Node/Express architecture.
+
+The current Electron build is portable and local-first. It does not add cloud sync across PCs; data is still stored locally in the Electron app profile.
 
 ## Development Notes
 

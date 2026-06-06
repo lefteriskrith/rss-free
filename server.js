@@ -1,9 +1,11 @@
 import express from "express";
 import Parser from "rss-parser";
 import * as cheerio from "cheerio";
-import { pathToFileURL } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
+import { join } from "path";
 
 const app = express();
+const ROOT_DIR = fileURLToPath(new URL(".", import.meta.url));
 const parser = new Parser({
   timeout: 12000,
   headers: {
@@ -21,7 +23,7 @@ const ARTICLE_HINTS = [
 const SKIP_HINTS = /(about|account|advertis|archive|author|cart|category|comment|contact|cookie|feed|footer|help|login|logout|menu|privacy|profile|search|share|shop|signin|signup|tag|terms)/i;
 
 app.use(express.json({ limit: "1mb" }));
-app.use(express.static("public"));
+app.use(express.static(join(ROOT_DIR, "public")));
 
 app.get("/api/discover", async (req, res) => {
   const targetUrl = normalizeInputUrl(req.query.url);
