@@ -6,6 +6,16 @@ It runs on your own machine with a small Node/Express server. There is no login,
 
 ![RSS Yo reader screenshot](docs/screenshots/rss-yo-reader.png)
 
+## Download
+
+[![Download RSS Yo 1.0.0 for Windows](https://img.shields.io/badge/Download-Windows%20portable%20.rar-2ea44f?style=for-the-badge)](release/RSS-Yo-1.0.0-portable.rar)
+
+The packaged executable inside the release folder is:
+
+```text
+release/RSS-Yo-1.0.0-portable.exe
+```
+
 ## What It Does
 
 RSS Yo gives you three practical tools in one app:
@@ -100,6 +110,12 @@ The generated app is written to:
 
 ```text
 release/RSS-Yo-1.0.0-portable.exe
+```
+
+The downloadable archive is:
+
+```text
+release/RSS-Yo-1.0.0-portable.rar
 ```
 
 The desktop app starts its own local Express server on:
