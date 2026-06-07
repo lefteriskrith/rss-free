@@ -10,11 +10,23 @@ const parser = new Parser({
   timeout: 12000,
   headers: {
     "User-Agent": "RSS Yo/1.0 (+local personal reader)"
+  },
+  customFields: {
+    feed: ["image", "link"],
+    item: [
+      ["media:content", "mediaContent"],
+      ["media:thumbnail", "mediaThumbnail"],
+      ["itunes:image", "itunesImage"]
+    ]
   }
 });
 
 const PORT = process.env.PORT || 5173;
 const COMMON_FEED_PATHS = ["/feed", "/rss", "/rss.xml", "/atom.xml", "/feed.xml"];
+const ARTICLE_IMAGE_LOOKUP_LIMIT = 24;
+const ARTICLE_IMAGE_LOOKUP_CONCURRENCY = 4;
+const ARTICLE_IMAGE_LOOKUP_TIMEOUT = 4500;
+const LOGO_IMAGE_HINTS = /(avatar|brand|default|favicon|icon|logo|placeholder|site-logo|social-share|uh-logo|unboxholics)/i;
 const ARTICLE_HINTS = [
   /\/\d{4}\/\d{1,2}\//,
   /\/\d{4}-\d{1,2}-\d{1,2}/,
@@ -55,10 +67,11 @@ async function discoverSource(inputUrl) {
   if (directFeed) {
     return {
       inputUrl,
-      siteUrl: inputUrl,
+      siteUrl: directFeed.link || inputUrl,
       mode: "rss",
       feedUrl: inputUrl,
       title: directFeed.title || hostname(inputUrl),
+      avatarUrl: directFeed.imageUrl || faviconUrl(directFeed.link || inputUrl),
       posts: directFeed.items
     };
   }
@@ -79,18 +92,22 @@ async function discoverSource(inputUrl) {
         mode: "rss",
         feedUrl,
         title: feed.title || hostname(homepage.finalUrl),
+        avatarUrl: feed.imageUrl || findSiteIcon(homepage.text, homepage.finalUrl) || faviconUrl(homepage.finalUrl),
         posts: feed.items
       };
     }
   }
 
   const scraped = extractArticles(homepage.text, homepage.finalUrl);
+  normalizeItemImages(scraped, homepage.finalUrl);
+  await enrichMissingItemImages(scraped);
   return {
     inputUrl,
     siteUrl: homepage.finalUrl,
     mode: "scrape",
     feedUrl: null,
     title: pageTitle(homepage.text) || hostname(homepage.finalUrl),
+    avatarUrl: findSiteIcon(homepage.text, homepage.finalUrl) || faviconUrl(homepage.finalUrl),
     posts: scraped
   };
 }
@@ -100,25 +117,33 @@ async function tryParseFeed(feedUrl) {
     const parsed = await parser.parseURL(feedUrl);
     if (!parsed.items?.length && !parsed.title) return null;
 
+    const items = (parsed.items || []).map((item) => ({
+      id: canonicalUrl(item.link || item.guid || feedUrl),
+      title: cleanText(item.title) || "Untitled",
+      url: canonicalUrl(item.link || item.guid || feedUrl),
+      date: normalizeDate(item.isoDate || item.pubDate),
+      excerpt: cleanText(item.contentSnippet || item.summary || item.content || ""),
+      author: cleanText(item.creator || item.author || ""),
+      imageUrl: itemImageUrl(item, feedUrl)
+    }));
+
+    normalizeItemImages(items, parsed.link || feedUrl);
+    await enrichMissingItemImages(items);
+
     return {
       title: parsed.title,
-      items: (parsed.items || []).map((item) => ({
-        id: canonicalUrl(item.link || item.guid || feedUrl),
-        title: cleanText(item.title) || "Untitled",
-        url: canonicalUrl(item.link || item.guid || feedUrl),
-        date: normalizeDate(item.isoDate || item.pubDate),
-        excerpt: cleanText(item.contentSnippet || item.summary || item.content || ""),
-        author: cleanText(item.creator || item.author || "")
-      }))
+      link: parsed.link,
+      imageUrl: feedImageUrl(parsed),
+      items
     };
   } catch {
     return null;
   }
 }
 
-async function fetchText(url) {
+async function fetchText(url, options = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 12000);
 
   let response;
   try {
@@ -200,6 +225,7 @@ function extractArticles(html, baseUrl) {
     const excerpt =
       cleanText($element.find("p").first().text()) ||
       cleanText($element.closest("article,li,section,div").find("p").first().text());
+    const imageUrl = firstImageUrl($, $element, baseUrl) || firstImageUrl($, $element.closest("article,li,section,div"), baseUrl);
 
     candidates.set(canonicalUrl(url), {
       id: canonicalUrl(url),
@@ -208,7 +234,8 @@ function extractArticles(html, baseUrl) {
       date,
       excerpt,
       author: "",
-      siteName
+      siteName,
+      imageUrl
     });
   });
 
@@ -303,6 +330,165 @@ function pageTitle(html) {
   return cleanText($("meta[property='og:site_name']").attr("content") || $("title").first().text());
 }
 
+function feedImageUrl(feed) {
+  const image = feed.image;
+  const url = typeof image === "string" ? image : image?.url || image?.href;
+  return url ? toAbsoluteUrl(url, feed.link || "") || url : "";
+}
+
+function itemImageUrl(item, baseUrl) {
+  const candidates = [
+    item.enclosure?.type?.startsWith("image/") ? item.enclosure.url : "",
+    imageFieldUrl(item.mediaContent),
+    imageFieldUrl(item.mediaThumbnail),
+    imageFieldUrl(item.itunesImage),
+    htmlImageUrl(item.content || item.summary || "", item.link || baseUrl)
+  ];
+
+  return candidates.map((url) => toAbsoluteUrl(url, item.link || baseUrl) || url).find(Boolean) || "";
+}
+
+function imageFieldUrl(value) {
+  if (!value) return "";
+  if (Array.isArray(value)) return value.map(imageFieldUrl).find(Boolean) || "";
+  if (typeof value === "string") return value;
+  return value.url || value.href || value.$?.url || value.$?.href || "";
+}
+
+function htmlImageUrl(html, baseUrl) {
+  const $ = cheerio.load(html || "");
+  return firstImageUrl($, $.root(), baseUrl);
+}
+
+async function enrichMissingItemImages(items) {
+  const missing = items.filter((item) => needsArticleImageLookup(item) && item.url).slice(0, ARTICLE_IMAGE_LOOKUP_LIMIT);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < missing.length) {
+      const item = missing[nextIndex];
+      nextIndex += 1;
+      item.imageUrl = await articlePageImageUrl(item.url);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(ARTICLE_IMAGE_LOOKUP_CONCURRENCY, missing.length) }, worker));
+}
+
+async function articlePageImageUrl(url) {
+  try {
+    const page = await fetchText(url, { timeoutMs: ARTICLE_IMAGE_LOOKUP_TIMEOUT });
+    return findArticleImage(page.text, page.finalUrl);
+  } catch {
+    return "";
+  }
+}
+
+function findArticleImage(html, baseUrl) {
+  const $ = cheerio.load(html);
+  const metaImage = $(
+    "meta[property='og:image:secure_url'], meta[property='og:image'], meta[name='twitter:image'], meta[name='twitter:image:src']"
+  )
+    .first()
+    .attr("content");
+
+  if (metaImage) return toAbsoluteUrl(metaImage, baseUrl);
+
+  const imageSrc = $("article img, main img, [role='main'] img").first().attr("src");
+  return imageSrc ? toAbsoluteUrl(imageSrc, baseUrl) : "";
+}
+
+function normalizeItemImages(items, feedSiteUrl) {
+  const counts = items.reduce((totals, item) => {
+    if (!item.imageUrl) return totals;
+    const key = imageFingerprint(item.imageUrl);
+    totals.set(key, (totals.get(key) || 0) + 1);
+    return totals;
+  }, new Map());
+
+  items.forEach((item) => {
+    if (isLikelyLogoImage(item.imageUrl, feedSiteUrl, counts)) item.imageUrl = "";
+  });
+}
+
+function needsArticleImageLookup(item) {
+  return !item.imageUrl || isLikelyLogoImage(item.imageUrl, item.url);
+}
+
+function isLikelyLogoImage(imageUrl, pageUrl = "", counts = new Map()) {
+  if (!imageUrl) return true;
+  if (/^data:image\//i.test(imageUrl)) return true;
+
+  try {
+    const image = new URL(imageUrl, pageUrl || "https://example.com/");
+    const page = pageUrl ? new URL(pageUrl) : null;
+    const path = decodeURIComponent(image.pathname);
+    const filename = path.split("/").pop() || "";
+    const repeatedAcrossFeed = counts.get(imageFingerprint(image.toString())) >= 3;
+    const isRootAsset = page && image.hostname === page.hostname && path.split("/").filter(Boolean).length <= 1;
+
+    return repeatedAcrossFeed || isRootAsset || LOGO_IMAGE_HINTS.test(`${path} ${filename}`);
+  } catch {
+    return LOGO_IMAGE_HINTS.test(imageUrl);
+  }
+}
+
+function imageFingerprint(imageUrl) {
+  try {
+    const url = new URL(imageUrl);
+    url.search = "";
+    url.hash = "";
+    return url.toString().toLowerCase();
+  } catch {
+    return String(imageUrl || "").toLowerCase();
+  }
+}
+
+function firstImageUrl($, scope, baseUrl) {
+  const images = scope.find("img").toArray();
+
+  for (const element of images) {
+    const image = $(element);
+    const src =
+      image.attr("data-src") ||
+      image.attr("data-lazy-src") ||
+      image.attr("data-original") ||
+      firstSrcsetUrl(image.attr("data-srcset") || image.attr("srcset")) ||
+      image.attr("src");
+    const absoluteUrl = src ? toAbsoluteUrl(src, baseUrl) : "";
+    if (absoluteUrl && !isLikelyLogoImage(absoluteUrl, baseUrl)) return absoluteUrl;
+  }
+
+  return "";
+}
+
+function firstSrcsetUrl(srcset) {
+  return (
+    String(srcset || "")
+      .split(",")
+      .map((candidate) => candidate.trim().split(/\s+/)[0])
+      .find(Boolean) || ""
+  );
+}
+
+function findSiteIcon(html, baseUrl) {
+  const $ = cheerio.load(html);
+  const ogImage = $("meta[property='og:image'], meta[name='twitter:image']").first().attr("content");
+  if (ogImage) return toAbsoluteUrl(ogImage, baseUrl);
+
+  const icon = $("link[rel~='apple-touch-icon'], link[rel~='icon']").first().attr("href");
+  return icon ? toAbsoluteUrl(icon, baseUrl) : "";
+}
+
+function faviconUrl(siteUrl) {
+  try {
+    const url = new URL(siteUrl);
+    return `${url.origin}/favicon.ico`;
+  } catch {
+    return "";
+  }
+}
+
 function hostname(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -319,7 +505,11 @@ export {
   discoverSource,
   extractArticles,
   findFeedLinks,
+  findArticleImage,
+  findSiteIcon,
+  isLikelyLogoImage,
   isLikelyArticle,
+  itemImageUrl,
   normalizeDate,
   normalizeInputUrl,
   pageTitle,

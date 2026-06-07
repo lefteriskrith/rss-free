@@ -1,4 +1,7 @@
 const STORAGE_KEY = "rss-yo-state-v1";
+const MAX_EXCERPT_LENGTH = 520;
+const POST_RETENTION_DAYS = 365;
+const POST_RETENTION_MS = POST_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
 const state = loadState();
 let currentFilter = "unread";
@@ -119,6 +122,7 @@ async function addOrRefreshSource(url, options = {}) {
       siteUrl: result.siteUrl,
       feedUrl: result.feedUrl,
       title: result.title,
+      avatarUrl: result.avatarUrl || "",
       mode: result.mode,
       group: normalizeGroup(options.group) || "General",
       addedAt: new Date().toISOString(),
@@ -129,6 +133,7 @@ async function addOrRefreshSource(url, options = {}) {
     source.siteUrl = result.siteUrl;
     source.feedUrl = result.feedUrl;
     source.title = result.title || source.title;
+    source.avatarUrl = result.avatarUrl || source.avatarUrl || "";
     source.mode = result.mode;
     source.group = normalizeGroup(options.group) || source.group || "General";
     source.lastChecked = new Date().toISOString();
@@ -167,6 +172,7 @@ async function refreshAllSources() {
       source.siteUrl = result.siteUrl;
       source.feedUrl = result.feedUrl;
       source.title = result.title || source.title;
+      source.avatarUrl = result.avatarUrl || source.avatarUrl || "";
       source.mode = result.mode;
       source.lastChecked = new Date().toISOString();
       added += mergePosts(result.posts || [], source);
@@ -183,12 +189,22 @@ async function refreshAllSources() {
 
 function mergePosts(posts, source) {
   let added = 0;
-  const known = new Set(state.posts.map((post) => post.id));
+  const known = new Map(state.posts.map((post) => [post.id, post]));
 
   posts.forEach((post) => {
     const url = canonicalUrl(post.url || post.id);
-    if (!url || known.has(url)) return;
-    known.add(url);
+    if (!url) return;
+
+    const existing = known.get(url);
+    if (existing) {
+      existing.imageUrl = post.imageUrl || existing.imageUrl || "";
+      existing.sourceAvatarUrl = source.avatarUrl || existing.sourceAvatarUrl || "";
+      existing.sourceTitle = source.title || existing.sourceTitle;
+      existing.excerpt = trimExcerpt(post.excerpt || existing.excerpt || "");
+      return;
+    }
+
+    known.set(url, post);
     state.posts.push({
       id: url,
       sourceId: source.id,
@@ -196,8 +212,10 @@ function mergePosts(posts, source) {
       title: post.title || "Untitled",
       url,
       date: post.date || "",
-      excerpt: post.excerpt || "",
+      excerpt: trimExcerpt(post.excerpt || ""),
       author: post.author || "",
+      imageUrl: post.imageUrl || "",
+      sourceAvatarUrl: source.avatarUrl || "",
       read: false,
       favorite: false,
       discoveredAt: new Date().toISOString()
@@ -460,6 +478,9 @@ function renderPosts() {
     const toggle = fragment.querySelector(".read-toggle");
     const link = fragment.querySelector(".post-link");
     const time = fragment.querySelector("time");
+    const avatar = fragment.querySelector(".post-avatar");
+    const avatarImage = avatar.querySelector("img");
+    const avatarInitial = avatar.querySelector("span");
 
     article.dataset.postId = post.id;
     article.classList.toggle("read", post.read);
@@ -489,9 +510,37 @@ function renderPosts() {
     time.dateTime = post.date || post.discoveredAt;
     fragment.querySelector("h3").textContent = post.title;
     fragment.querySelector("p").textContent = post.excerpt || post.url;
+    renderPostAvatar(post, avatar, avatarImage, avatarInitial);
 
     elements.feedList.appendChild(fragment);
   });
+}
+
+function renderPostAvatar(post, avatar, image, initial) {
+  const imageUrl = post.imageUrl || post.sourceAvatarUrl || sourceAvatarForPost(post);
+  const label = post.sourceTitle || "Source";
+  initial.textContent = sourceInitial(label);
+
+  if (!imageUrl) {
+    avatar.classList.add("initial-only");
+    image.hidden = true;
+    initial.hidden = false;
+    return;
+  }
+
+  avatar.classList.remove("initial-only");
+  image.hidden = false;
+  initial.hidden = true;
+  image.addEventListener(
+    "error",
+    () => {
+      image.hidden = true;
+      initial.hidden = false;
+      avatar.classList.add("initial-only");
+    },
+    { once: true }
+  );
+  image.src = imageUrl;
 }
 
 function filteredPosts() {
@@ -748,7 +797,8 @@ function normalizeState() {
   const before = JSON.stringify({
     groups: state.groups,
     collapsedGroups: state.collapsedGroups,
-    sourceGroups: state.sources.map((source) => source.group)
+    sourceGroups: state.sources.map((source) => source.group),
+    postIds: state.posts.map((post) => post.id)
   });
 
   state.collapsedGroups = state.collapsedGroups || {};
@@ -770,11 +820,13 @@ function normalizeState() {
       .map(([group, collapsed]) => [normalizeGroup(group), Boolean(collapsed)])
       .filter(([group]) => state.groups.includes(group))
   );
+  pruneOldPosts();
 
   const after = JSON.stringify({
     groups: state.groups,
     collapsedGroups: state.collapsedGroups,
-    sourceGroups: state.sources.map((source) => source.group)
+    sourceGroups: state.sources.map((source) => source.group),
+    postIds: state.posts.map((post) => post.id)
   });
   if (before !== after) saveState();
 }
@@ -868,6 +920,28 @@ function groupedSources() {
 
 function sourceGroupForPost(post) {
   return state.sources.find((source) => source.id === post.sourceId)?.group || "General";
+}
+
+function sourceAvatarForPost(post) {
+  return state.sources.find((source) => source.id === post.sourceId)?.avatarUrl || "";
+}
+
+function sourceInitial(value) {
+  return String(value || "?").trim().charAt(0).toUpperCase() || "?";
+}
+
+function trimExcerpt(value) {
+  const excerpt = String(value || "").replace(/\s+/g, " ").trim();
+  if (excerpt.length <= MAX_EXCERPT_LENGTH) return excerpt;
+  return `${excerpt.slice(0, MAX_EXCERPT_LENGTH).trimEnd()}...`;
+}
+
+function pruneOldPosts() {
+  const cutoff = Date.now() - POST_RETENTION_MS;
+  state.posts = state.posts.filter((post) => {
+    const value = dateValue(post.date || post.discoveredAt);
+    return !value || value >= cutoff;
+  });
 }
 
 function unreadCountForSource(sourceId) {

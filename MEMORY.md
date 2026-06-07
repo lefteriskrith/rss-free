@@ -20,6 +20,7 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - Desktop exe: Electron portable Windows build via `npm run dist:win`; output goes to `release/RSS-Yo-1.0.0-portable.exe`.
 - Windows exe icon: generated at `build/icon.ico` from the orange RSS Yo logo via `npm run build:icon`.
 - Persistence: browser `localStorage` under `rss-yo-state-v1`.
+- Post retention: stored posts older than 365 days are pruned automatically from localStorage.
 - No login and no database in v1.
 
 ## Core Behavior
@@ -31,6 +32,7 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
   - Common feed paths: `/feed`, `/rss`, `/rss.xml`, `/atom.xml`, `/feed.xml`.
 - If no feed works, server scrapes likely article links from article/main/content areas.
 - Posts are deduplicated by canonical URL.
+- Posts older than 365 days are automatically deleted based on `date` or, if missing, `discoveredAt`; posts with no valid date are kept.
 - Feed view shows title, source, date, excerpt, original link, and read/unread state.
 - Clicking a post opens the original URL in a new tab and marks it read.
 - Posts must not become read automatically merely from hover or scroll visibility.
@@ -144,3 +146,4 @@ RSS Yo is a local/self-hosted personal RSS reader and RSS generator.
 - 2026-06-06: Added group right-click `Mark group read`, toolbar `Mark read all` for visible posts, and replaced read-state buttons with a dropdown defaulting to `Unread`.
 - 2026-06-06: Added Electron desktop packaging with `electron/main.js`, `npm run desktop`, and `npm run dist:win`; the portable exe starts the local server automatically on fixed port `51733`.
 - 2026-06-06: Added `scripts/create-windows-icon.js` to generate `build/icon.ico` from the orange RSS Yo logo and embed it in the Windows exe.
+- 2026-06-07: Added automatic post retention cleanup: posts older than 365 days are pruned from localStorage to keep AppData/local profiles from growing indefinitely.
