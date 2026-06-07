@@ -1,5 +1,7 @@
 # RSS Yo
 
+![RSS Yo dark reader with feed avatars](docs/screenshots/rss-yo-dark-avatars.png)
+
 [![Windows portable](https://img.shields.io/badge/Windows-portable-2ea44f?style=for-the-badge)](release/RSS-Yo-1.0.0-portable.rar)
 
 RSS Yo is a local-first RSS reader and lightweight RSS generator for personal use. Add normal RSS/Atom feeds, paste regular website URLs, organize everything into groups, and read posts from one clean interface.
